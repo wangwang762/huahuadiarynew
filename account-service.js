@@ -1,10 +1,11 @@
 /* ============================================================
-   花花日记本 MVP · account boundary
-   Local adapter for now; keep the public API when CloudBase replaces it.
+   花花日记本 MVP · standard email OTP account boundary
+   Development adapter now; CloudBase will replace these async methods.
    ============================================================ */
 (function () {
-  const ACCOUNTS_KEY = "hh-mvp-accounts-v1";
-  const SESSION_KEY = "hh-mvp-session-v1";
+  const ACCOUNTS_KEY = "hh-mvp-accounts-v2";
+  const SESSION_KEY = "hh-mvp-session-v2";
+  const DEV_CODE = "123456";
 
   function readAccounts() {
     try {
@@ -41,14 +42,33 @@
     return readAccounts()[email] || null;
   }
 
-  function enterWithEmail(rawEmail) {
+  async function requestEmailCode(rawEmail) {
     const email = normalizeEmail(rawEmail);
     if (!isValidEmail(email)) throw new Error("再检查一下邮箱格式，好像少了点什么");
+
+    // Development adapter: CloudBase Auth.getVerification replaces this block.
+    await new Promise(resolve => setTimeout(resolve, 420));
+    return {
+      email,
+      verificationInfo: { id: makeId(), issuedAt: Date.now() },
+      expiresIn: 600,
+      devCode: DEV_CODE,
+    };
+  }
+
+  async function verifyEmailCode(rawEmail, rawCode, verificationInfo) {
+    const email = normalizeEmail(rawEmail);
+    const code = String(rawCode || "").replace(/\D/g, "").slice(0, 6);
+    if (!verificationInfo || !verificationInfo.id) throw new Error("这封信已经失效，请重新获取验证码");
+    if (code.length !== 6) throw new Error("请输入完整的 6 位验证码");
+
+    // Development adapter: CloudBase Auth.signInWithEmail replaces this check.
+    await new Promise(resolve => setTimeout(resolve, 360));
+    if (code !== DEV_CODE) throw new Error("验证码不对，再看看邮件里的六位数字");
 
     const accounts = readAccounts();
     let account = accounts[email];
     const isNew = !account;
-
     if (!account) {
       const isLegacyGarden = Object.keys(accounts).length === 0 && localStorage.getItem("hh-onboarded") === "1";
       account = {
@@ -56,12 +76,9 @@
         email,
         onboarded: isLegacyGarden,
         createdAt: new Date().toISOString(),
-        lastEnteredAt: new Date().toISOString(),
       };
-    } else {
-      account = { ...account, lastEnteredAt: new Date().toISOString() };
     }
-
+    account = { ...account, emailVerified: true, lastEnteredAt: new Date().toISOString() };
     accounts[email] = account;
     writeAccounts(accounts);
     localStorage.setItem(SESSION_KEY, email);
@@ -84,10 +101,12 @@
   }
 
   window.HHAccount = {
+    mode: "development",
     normalizeEmail,
     isValidEmail,
     getCurrentAccount,
-    enterWithEmail,
+    requestEmailCode,
+    verifyEmailCode,
     markOnboarded,
     signOut,
   };
