@@ -608,6 +608,11 @@ window.SPECIES = SPECIES_LIBRARY_IDS.map(id => {
   };
 });
 
+// Authored plants are a preview fixture, not production account data.
+// Normal CloudBase boot replaces window.PLANTS with the signed-in user's rows;
+// only ?demo=1 restores this snapshot.
+window.DEMO_PLANTS = JSON.parse(JSON.stringify(window.PLANTS));
+
 // generate a first-meeting opener (fallback when offline)
 window.firstLineFallback = {
   仙人掌: "哼……你就是我的主人？别一脸期待，我可不擅长撒娇。（不过……你好。）",

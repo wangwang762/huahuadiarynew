@@ -83,9 +83,9 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         {typing && <Typing avatar={avatar} />}
         {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && !finished && (
           <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 12px" }}>
-            <button onClick={() => {
+            <button onClick={async () => {
                 const conclusion = [...convo].reverse().find(m => m.role === "assistant")?.content || opener;
-                const sum = onFinishDx(conclusion);
+                const sum = await onFinishDx(conclusion);
                 if (sum) setFinished(sum);
               }}
               style={{ height: 36, padding: "0 16px", fontSize: 13, color: "var(--green-deep)", fontWeight: 600,
@@ -224,7 +224,7 @@ function DoctorChat({ go, plant, onSaveEntry }) {
       <Icon name="camera" size={16} color="var(--green-deep)" /> 正在分析 · {p.isNew ? `你带来的新朋友（${p.species}）` : `你上传的${p.name}（${p.species}）`}照片
     </div>
   );
-  function finishDx(conclusion) {
+  async function finishDx(conclusion) {
     if (p.isNew) { go("archiveNew", p, { dx: conclusion }); return null; }
     if (onSaveEntry) {
       const entry = window.makeEntry("diagnosis", p, {
@@ -234,7 +234,7 @@ function DoctorChat({ go, plant, onSaveEntry }) {
         voice: p.voice,
         photo: p.photoId,
       });
-      onSaveEntry(p, entry);
+      await onSaveEntry(p, entry);
     }
     return { plantName: p.name, points: "散射光 · 多通风 · 土干透再浇" };
   }

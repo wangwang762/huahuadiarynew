@@ -9,6 +9,8 @@ function Onboard({ onComplete, onSkip }) {
   const [name, setName] = useState("");
   const [traits, setTraits] = useState(window.SPECIES[0].traits.slice(0, 3));
   const [opener, setOpener] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   function pickSpecies(s) {
     setSp(s);
@@ -45,6 +47,18 @@ function Onboard({ onComplete, onSkip }) {
     return p;
   }
 
+  async function completeOnboarding() {
+    if (saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await onComplete(buildPlant(opener));
+    } catch (error) {
+      setSaveError(error && error.message ? error.message : "这篇日记暂时没有写进去，请再试一次");
+      setSaving(false);
+    }
+  }
+
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden",
       background: `radial-gradient(140% 70% at 50% -8%, #FBF4E8 0%, var(--paper) 44%, ${sp.soft}55 100%)` }}>
@@ -62,7 +76,7 @@ function Onboard({ onComplete, onSkip }) {
       {step === 3 && <ObName sp={sp} name={name} setName={setName} traits={traits} toggleTrait={toggleTrait} onNext={() => setStep(4)} />}
       {step === 4 && <ObGenerate sp={sp} name={name} traits={traits} setOpener={setOpener} onNext={() => setStep(5)} />}
       {step === 5 && <ObReveal sp={sp} name={name} opener={opener}
-        onDone={() => onComplete(buildPlant(opener))} />}
+        onDone={completeOnboarding} saving={saving} saveError={saveError} />}
     </div>
   );
 }
@@ -307,7 +321,7 @@ function ObGenerate({ sp, name, traits, setOpener, onNext }) {
 }
 
 /* ---------- 5 · first diary entry reveal ---------- */
-function ObReveal({ sp, name, opener, onDone }) {
+function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "0 30px" }}>
@@ -343,10 +357,11 @@ function ObReveal({ sp, name, opener, onDone }) {
         </div>
       </div>
 
-      <button onClick={onDone} className="btn-green" style={{ marginTop: 34, width: "100%", maxWidth: 300, height: 56, fontSize: 17,
+      {saveError && <div role="alert" style={{ marginTop: 18, maxWidth: 300, fontSize: 12.5, lineHeight: 1.5, color: "var(--coral)", textAlign: "center" }}>{saveError}</div>}
+      <button onClick={onDone} disabled={saving} className="btn-green" style={{ marginTop: saveError ? 14 : 34, width: "100%", maxWidth: 300, height: 56, fontSize: 17,
         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` }}>
-        <Icon name="book" size={20} color="#fff" /> 打开我们的日记本
+        opacity: saving ? .68 : 1, background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` }}>
+        <Icon name="book" size={20} color="#fff" /> {saving ? "正在收进日记本……" : saveError ? "再试一次" : "打开我们的日记本"}
       </button>
     </div>
   );

@@ -60,7 +60,7 @@ function EmailEntry({ onEnter }) {
     setBusy(true);
     try {
       const result = await window.HHAccount.verifyEmailCode(email, code, verificationInfo);
-      onEnter(result);
+      await onEnter(result);
     } catch (err) {
       setError(err && err.message ? err.message : "花园门口有点拥挤，请再试一次");
       setBusy(false);
@@ -169,13 +169,6 @@ function EmailEntry({ onEnter }) {
                   style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "text" }} />
               </div>
               <InlineEmailError error={error} />
-
-              {window.HHAccount.mode === "development" && (
-                <div style={{ marginTop: 4, padding: "9px 12px", borderRadius: 9, background: "var(--lime-soft)",
-                  color: "var(--ink-soft)", fontSize: 12.5, textAlign: "center" }}>
-                  开发预览验证码：<strong style={{ fontFamily: "var(--f-num)", color: "var(--ink)", letterSpacing: "1px" }}>123456</strong>
-                </div>
-              )}
 
               <button type="submit" disabled={busy || code.length !== 6} className="btn-green" style={{ width: "100%", height: 52, marginTop: 14,
                 fontSize: 16, opacity: busy || code.length !== 6 ? .48 : 1 }}>

@@ -7,17 +7,28 @@ function ProfileScreen({ go, plant, onSave, isTab }) {
   const [off, setOff] = useState(p.tagsOff);
   const [custom, setCustom] = useState(p.custom);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   function toggle(tag, isOn) {
     if (isOn) { setOn(on.filter(t => t !== tag)); setOff([tag, ...off]); }
     else      { setOff(off.filter(t => t !== tag)); setOn([...on, tag]); }
     setSaved(false);
   }
-  function done() {
-    p.tagsOn = on; p.tagsOff = off; p.custom = custom;
-    onSave && onSave(p);
-    setSaved(true);
-    if (!isTab) setTimeout(() => go("back"), 450);
+  async function done() {
+    if (saving || saved) return;
+    setSaving(true);
+    setSaveError("");
+    const updated = { ...p, tagsOn: on, tagsOff: off, custom };
+    try {
+      if (onSave) await onSave(updated);
+      setSaved(true);
+      if (!isTab) setTimeout(() => go("back"), 450);
+    } catch (error) {
+      setSaveError(error && error.message ? error.message : "没有保存成功，请再试一次");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -29,10 +40,12 @@ function ProfileScreen({ go, plant, onSave, isTab }) {
           <Icon name="chevL" size={24} color="var(--ink-soft)" />
           <span style={{ fontSize: 15, fontFamily: "var(--f-journal)" }}>{isTab ? "聚集地" : p.name}</span>
         </button>
-        <button onClick={done} style={{ fontSize: 15, fontWeight: 600, color: saved ? "var(--ink-faint)" : p.deep }}>
-          {saved ? "已保存 ✓" : "完成"}
+        <button onClick={done} disabled={saving} style={{ fontSize: 15, fontWeight: 600, color: saved ? "var(--ink-faint)" : p.deep }}>
+          {saved ? "已保存 ✓" : saving ? "保存中…" : "完成"}
         </button>
       </div>
+      {saveError && <div role="alert" style={{ margin: "8px 22px 0", padding: "9px 12px", borderRadius: 10,
+        background: "rgba(200,85,60,.08)", color: "var(--coral)", fontSize: 12.5, textAlign: "center" }}>{saveError}</div>}
 
       {/* portrait */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 10 }}>

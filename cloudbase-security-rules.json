@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "read": "auth != null && auth.uid == doc.ownerId",
+    "create": "auth != null && auth.uid == request.data.ownerId",
+    "update": "auth != null && auth.uid == doc.ownerId && auth.uid == request.data.ownerId",
+    "delete": "auth != null && auth.uid == doc.ownerId"
+  },
+  "plants": {
+    "read": "auth != null && auth.uid == doc.ownerId",
+    "create": "auth != null && auth.uid == request.data.ownerId",
+    "update": "auth != null && auth.uid == doc.ownerId && auth.uid == request.data.ownerId",
+    "delete": "auth != null && auth.uid == doc.ownerId"
+  },
+  "diary_entries": {
+    "read": "auth != null && auth.uid == doc.ownerId",
+    "create": "auth != null && auth.uid == request.data.ownerId",
+    "update": "auth != null && auth.uid == doc.ownerId && auth.uid == request.data.ownerId",
+    "delete": "auth != null && auth.uid == doc.ownerId"
+  }
+}

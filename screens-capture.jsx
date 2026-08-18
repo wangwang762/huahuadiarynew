@@ -6,6 +6,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   const p = plant;
   const [step, setStep] = useState("shoot"); // shoot | analyzing | identify | good | abnormal
   const [voice, setVoice] = useState("");
+  const [saveError, setSaveError] = useState("");
   const needsDoctor = p.statusTone === "warn";
 
   // (demo: a vision model reads the photo and returns a species guess.)
@@ -34,7 +35,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
     setTimeout(() => setStep(needsDoctor ? "abnormal" : "good"), needsDoctor ? 1700 : 1900);
   }
 
-  function saveRecord(concern) {
+  async function saveRecord(concern) {
     const entry = concern
       ? window.makeEntry("record", p, {
           mood: "留心", voice: p.voice,
@@ -47,8 +48,13 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
           quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "状态正好" }, "。"],
           photo: p.photoId,
         });
-    onSaveEntry(p, entry);
-    go("plantDiary", p);
+    setSaveError("");
+    try {
+      await onSaveEntry(p, entry);
+      go("plantDiary", p);
+    } catch (error) {
+      setSaveError(error && error.message ? error.message : "这篇记录没有保存成功，请再试一次");
+    }
   }
 
   function pickExisting(pp) { go("doctorChat", pp); }
@@ -72,6 +78,8 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
 
       <div className="noscroll" style={{ flex: 1, overflowY: "auto", padding: "10px 24px 30px",
         display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {saveError && <div role="alert" style={{ width: "100%", marginBottom: 8, padding: "9px 12px", borderRadius: 10,
+          background: "rgba(200,85,60,.08)", color: "var(--coral)", fontSize: 12.5, textAlign: "center" }}>{saveError}</div>}
 
         {/* ---- the photo ---- */}
         <div style={{ position: "relative", marginTop: 8 }}>
@@ -266,6 +274,8 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
   const [speciesText, setSpeciesText] = useState(sp0.species);
   const [name, setName] = useState("");
   const [traits, setTraits] = useState(sp0.traits.slice(0, 3));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const photoId = (draft && draft.photoId) || "intake-new";
 
   function pickSp(s) { setSp(s); setSpeciesText(s.species); setTraits(s.traits.slice(0, 3)); }
@@ -275,7 +285,10 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
     setTraits(ts => ts.includes(t) ? ts.filter(x => x !== t) : (ts.length >= 4 ? ts : [...ts, t]));
   }
 
-  function archive() {
+  async function archive() {
+    if (saving) return;
+    setSaving(true);
+    setSaveError("");
     const nm = name.trim() || "新朋友";
     const finalSpecies = speciesText.trim() || sp.species;
     const guide = window.CARE_GUIDE[sp.shape] || window.CARE_GUIDE.succulent;
@@ -302,7 +315,12 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
       voice: newP.voice, stars: 5,
     };
     newP.diary = [dxEntry, born];
-    onArchive(newP);
+    try {
+      await onArchive(newP);
+    } catch (error) {
+      setSaveError(error && error.message ? error.message : "没有建档成功，请再试一次");
+      setSaving(false);
+    }
   }
 
   return (
@@ -386,11 +404,12 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
           </div>
         </div>
 
-        <button onClick={archive} className="btn-green"
+        {saveError && <div role="alert" style={{ marginTop: 18, color: "var(--coral)", fontSize: 12.5, textAlign: "center" }}>{saveError}</div>}
+        <button onClick={archive} disabled={saving} className="btn-green"
           style={{ marginTop: 26, width: "100%", height: 54, fontSize: 16.5, display: "flex", alignItems: "center",
             justifyContent: "center", gap: 9, background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})`,
-            boxShadow: `0 8px 20px ${sp.accent}4d` }}>
-          <Icon name="book" size={20} color="#fff" /> 建档，存进日记本
+            opacity: saving ? .68 : 1, boxShadow: `0 8px 20px ${sp.accent}4d` }}>
+          <Icon name="book" size={20} color="#fff" /> {saving ? "正在建档……" : "建档，存进日记本"}
         </button>
       </div>
     </div>
