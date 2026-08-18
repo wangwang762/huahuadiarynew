@@ -7,9 +7,9 @@ const TABS = ["diary", "doctor", "widget"];
 function App({ t = {} }) {
   const [, force] = useState(0);
   const [, setPlants] = useState(window.PLANTS);
-  const firstRun = !localStorage.getItem("hh-onboarded");
   const initTab = (typeof location !== "undefined" && /[?&#]tab=(\w+)/.exec(location.hash + location.search) || [])[1];
-  const [stack, setStack] = useState([{ view: firstRun ? "onboard" : (TABS.includes(initTab) ? initTab : "diary") }]);
+  const [account, setAccount] = useState(() => window.HHAccount.getCurrentAccount());
+  const [stack, setStack] = useState(() => [{ view: !account ? "email" : (!account.onboarded ? "onboard" : (TABS.includes(initTab) ? initTab : "diary")) }]);
   const top = stack[stack.length - 1];
   const baseTab = stack[0].view;
 
@@ -28,10 +28,16 @@ function App({ t = {} }) {
     setPlants(p => [...p]); force(n => n + 1);
   }
   function finishOnboard(newPlant) {
-    localStorage.setItem("hh-onboarded", "1");
+    const updatedAccount = window.HHAccount.markOnboarded();
+    if (updatedAccount) setAccount(updatedAccount);
     if (newPlant) window.PLANTS.unshift(newPlant);
     setPlants([...window.PLANTS]);
     setStack(newPlant ? [{ view: "plantDiary", plant: newPlant }] : [{ view: "diary" }]);
+  }
+  function enterGarden(result) {
+    setAccount(result.account);
+    const next = result.account.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard";
+    setStack([{ view: next }]);
   }
   function addEntry(pl, entry) {
     pl.diary.unshift(entry);
@@ -48,6 +54,7 @@ function App({ t = {} }) {
       {!isOverlay && baseTab === "widget" && <WidgetScreen go={go} t={t} />}
 
       {/* overlays */}
+      {top.view === "email" && <EmailEntry onEnter={enterGarden} />}
       {top.view === "onboard" && <Onboard onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake} onSaveEntry={addEntry} />}
