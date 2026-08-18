@@ -116,7 +116,14 @@ window.PlantDiary = PlantDiary;
 function SelfCareGuide({ plant }) {
   const p = plant;
   const [open, setOpen] = useState(false);
-  const sc = p.selfCare;
+  const sc = p.selfCare || {
+    say: `我是${p.name}。${p.custom || "先观察我的叶片和盆土，再慢慢找到适合我的照顾节奏"}。`,
+    tips: [
+      { icon: "drop", label: "浇水", text: "摸摸盆土再决定是否浇水，避免盆底长期积水。" },
+      { icon: "sun", label: "光照", text: "先放在明亮通风的位置，再根据状态调整光线。" },
+      { icon: "heart", label: "多观察", text: p.custom || "叶片和盆土的变化，就是我给你的提示。" },
+    ],
+  };
   return (
     <div style={{ padding: "16px 20px 0" }}>
       <div className="glass-card" style={{ overflow: "hidden" }}>

@@ -555,23 +555,63 @@ window.coverScale = function (id) {
 window.coverOffsetY = function (id) {
   return 5;
 };
-window.SPECIES = [
-  { species: "仙人掌", shape: "cactus",    accent: "#0B7A37", deep: "#0B5E2C", bubble: "#E7F1E4", soft: "#DCEBDB", pot: "#C98A3C",
-    traits: ["傲娇", "坚强", "耐旱", "怕水", "嘴硬心软", "高冷"], care: "干透浇透，怕涝爱晒" },
-  { species: "多肉",   shape: "succulent", accent: "#C25B7A", deep: "#9E3E5C", bubble: "#F7E6EC", soft: "#F2D9E1", pot: "#C98A3C",
-    traits: ["软萌", "怕冷", "黏人", "爱撒娇", "乖巧", "敏感"], care: "少水多光，最怕冻" },
-  { species: "绿萝",   shape: "pothos",    accent: "#5A9E2F", deep: "#437821", bubble: "#EAF3DD", soft: "#E0EFCF", pot: "#C98A3C",
-    traits: ["话唠", "随和", "乐观", "好养", "爱鼓励", "皮实"], care: "喜湿耐阴，超好养" },
-  { species: "龟背竹", shape: "monstera",  accent: "#1F7A6E", deep: "#145A50", bubble: "#DCEFEC", soft: "#CFE8E3", pot: "#C98A3C",
-    traits: ["稳重", "爱分析", "老练", "话痨", "嘴毒靠谱", "操心"], care: "散光通风，叶大爱裂" },
-  { species: "向日葵", shape: "sunflower", accent: "#C9971E", deep: "#A2790F", bubble: "#FBEFCF", soft: "#F7E6B8", pot: "#C98A3C",
-    traits: ["元气", "热情", "乐天", "向阳", "积极", "明亮"], care: "全日照，追着太阳转" },
+const SPECIES_LIBRARY_IDS = [
+  "alv", "laobei", "diaolan", "facaishu", "fuguizhu",
+  "ciji", "tuanzi", "hupilan", "luhui", "jinqianshu",
+  "hudielan", "changshouhua", "yueji", "zhizihua", "molihua",
+  "wenzhu", "baizhang", "hongzhang", "junzilan", "zhaozhao",
+  "bohe", "xianrenqiu", "lanmeishu", "xiuqiuhua", "zhubai",
 ];
+const SPECIES_COPY = {
+  ciji: { species: "仙人掌", traits: ["傲娇", "坚强", "耐旱", "怕水", "嘴硬心软", "高冷"], care: "干透浇透，怕涝爱晒" },
+  tuanzi: { species: "多肉植物", traits: ["软萌", "怕冷", "黏人", "爱撒娇", "乖巧", "敏感"], care: "少水多光，最怕冻" },
+  alv: { traits: ["话唠", "随和", "乐观", "好养", "爱鼓励", "皮实"], care: "喜湿耐阴，超好养" },
+  laobei: { traits: ["稳重", "爱分析", "老练", "话痨", "嘴毒靠谱", "操心"], care: "散光通风，叶大爱裂" },
+  zhaozhao: { traits: ["元气", "热情", "乐天", "向阳", "积极", "明亮"], care: "全日照，追着太阳转" },
+  diaolan: { traits: ["随和", "舒展", "清爽", "好养", "轻快", "爱吹风"], care: "喜明亮散光，盆土微润但别积水" },
+  facaishu: { traits: ["稳重", "乐观", "会鼓劲", "可靠", "温和", "有福气"], care: "耐阴怕涝，土干一半再浇" },
+  fuguizhu: { traits: ["安静", "挺拔", "有耐心", "清雅", "慢热", "好相处"], care: "散光养护，水培时保持水质清洁" },
+  hupilan: { traits: ["挺拔", "可靠", "少话", "独立", "坚强", "守规矩"], care: "耐旱耐阴，盆土干透再浇" },
+  luhui: { traits: ["清爽", "实用派", "独立", "耐旱", "安静", "直率"], care: "喜光耐旱，浇水宁少勿多" },
+  jinqianshu: { traits: ["沉稳", "慢热", "可靠", "有福气", "少话", "耐心"], care: "耐阴怕湿，土壤干燥后再浇" },
+  hudielan: { traits: ["优雅", "温柔", "爱漂亮", "从容", "细腻", "怕冷"], care: "喜温暖散光，植料将干时再补水" },
+  changshouhua: { traits: ["热闹", "爱开花", "乐观", "乖巧", "耐旱", "喜庆"], care: "多晒太阳少浇水，花后及时修剪" },
+  yueji: { traits: ["浪漫", "爱漂亮", "热情", "有脾气", "勤快", "勇敢"], care: "需要充足日照、通风和规律水肥" },
+  zhizihua: { traits: ["清雅", "敏感", "温柔", "爱干净", "慢热", "有香气"], care: "喜酸性湿润土壤，保持散光和通风" },
+  molihua: { traits: ["清甜", "温柔", "勤快", "爱晒太阳", "细腻", "亲人"], care: "喜充足光照，生长期保持水肥" },
+  wenzhu: { traits: ["文静", "轻盈", "慢性子", "清雅", "敏感", "有书卷气"], care: "喜散光和湿润空气，忌暴晒积水" },
+  baizhang: { traits: ["温柔", "安静", "爱干净", "好相处", "敏感", "清爽"], care: "喜散光湿润，缺水时叶片会低头" },
+  hongzhang: { traits: ["热情", "亮眼", "爱漂亮", "直率", "怕冷", "有精神"], care: "喜温暖散光，保持湿润但不积水" },
+  junzilan: { traits: ["端庄", "稳重", "有耐心", "讲究", "慢热", "可靠"], care: "喜柔和光线，盆土见干见湿" },
+  bohe: { traits: ["清醒", "话唠", "活泼", "清凉", "有活力", "爱长个"], care: "喜光也喜水，勤修剪会长得更茂盛" },
+  xianrenqiu: { traits: ["圆润", "坚强", "慢热", "耐旱", "安静", "有点萌"], care: "多晒太阳，盆土彻底干后再浇" },
+  lanmeishu: { traits: ["认真", "期待", "慢热", "爱结果", "清新", "有耐心"], care: "喜充足光照和酸性土，结果期水分要稳定" },
+  xiuqiuhua: { traits: ["浪漫", "温柔", "爱热闹", "敏感", "梦幻", "爱喝水"], care: "喜散光和湿润土壤，夏天注意遮阴补水" },
+  zhubai: { traits: ["安静", "沉稳", "清雅", "慢热", "可靠", "有生命力"], care: "喜温暖散光，保持湿润并避免积水" },
+};
+window.SPECIES = SPECIES_LIBRARY_IDS.map(id => {
+  const source = window.PLANTS.find(plant => plant.id === id);
+  const authored = SPECIES_COPY[id] || {};
+  const traits = authored.traits || [...new Set([...(source.tagsOn || []), ...(source.tagsOff || [])])].slice(0, 6);
+  return {
+    id,
+    species: authored.species || source.species,
+    photoId: source.photoId,
+    shape: source.shape,
+    accent: source.accent,
+    deep: source.deep,
+    bubble: source.bubble,
+    soft: source.soft,
+    pot: source.pot,
+    traits,
+    care: authored.care || source.custom,
+  };
+});
 
 // generate a first-meeting opener (fallback when offline)
 window.firstLineFallback = {
   仙人掌: "哼……你就是我的主人？别一脸期待，我可不擅长撒娇。（不过……你好。）",
-  多肉:   "你好呀～ 我软软的，有点怕冷，以后要多陪陪我哦。",
+  多肉植物: "你好呀～ 我软软的，有点怕冷，以后要多陪陪我哦。",
   绿萝:   "嘿！第一次见面～ 我超好养的，我们一定会处得很开心！",
   龟背竹: "新来的主人？我观察你一会儿了。放心，养我这事儿，包在我身上。",
   向日葵: "嗨！我是朝着光长的那种花——以后你低落的时候，记得抬头看看我。",
