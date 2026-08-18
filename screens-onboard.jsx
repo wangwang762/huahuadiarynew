@@ -119,24 +119,34 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
         </div>
       </div>
 
-      <div className="noscroll" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: 11, padding: "20px 2px 112px", alignContent: "start" }}>
+      <div className="noscroll" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gap: 8, padding: "18px 0 112px", alignContent: "start" }}>
         {window.SPECIES.map(s => {
           const on = s.id === sp.id;
           return (
-            <button key={s.id} aria-label={`选择${s.species}`} aria-pressed={on} onClick={() => pickSpecies(s)}
-              style={{ minHeight: 142, padding: "13px 8px 11px", borderRadius: 20, position: "relative",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-                background: on ? `linear-gradient(180deg, #fff, ${s.soft}cc)` : "rgba(255,255,255,0.58)",
+            <button key={s.id} data-picker-card="cover" aria-label={`选择${s.species}`} aria-pressed={on} onClick={() => pickSpecies(s)}
+              style={{ minHeight: 122, padding: 6, borderRadius: 15, position: "relative",
+                display: "flex", flexDirection: "column", alignItems: "stretch", gap: 6,
+                background: on ? `linear-gradient(180deg, #fff, ${s.soft}88)` : "rgba(255,255,255,0.5)",
                 border: on ? `2px solid ${s.accent}` : "1px solid var(--hairline)",
-                boxShadow: on ? `0 8px 18px ${s.accent}30` : "var(--sh-1)" }}>
-              {on && <span style={{ position: "absolute", top: 9, right: 9, width: 22, height: 22, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center", background: s.deep }}>
-                <Icon name="check" size={13} color="#fff" />
+                boxShadow: on ? `0 7px 15px ${s.accent}28` : "var(--sh-1)" }}>
+              {on && <span style={{ position: "absolute", top: 6, right: 6, width: 19, height: 19, borderRadius: "50%", zIndex: 3,
+                display: "flex", alignItems: "center", justifyContent: "center", background: s.deep, boxShadow: "0 2px 5px rgba(0,0,0,.12)" }}>
+                <Icon name="check" size={11} color="#fff" />
               </span>}
-              <PlantAvatar plant={s} size={78} />
-              <span style={{ fontFamily: "var(--f-journal)", fontSize: 15, fontWeight: on ? 700 : 600,
-                color: on ? s.deep : "var(--ink)" }}>{s.species}</span>
+              <div style={{ height: 78, borderRadius: 10, overflow: "hidden", position: "relative",
+                background: `linear-gradient(180deg, #FBF7EF 0%, ${s.soft}66 76%, ${s.soft}aa 100%)`,
+                display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                <image-slot id={`picker-${s.photoId}`} shape="rounded" radius="3" transparent-frame=""
+                  src={window.cutFor ? window.cutFor(s.photoId) : window.photoFor(s.photoId)} fit="contain" position="50% 100%"
+                  style={{ width: "100%", height: "75px", display: "block", position: "relative",
+                    top: window.coverOffsetY ? window.coverOffsetY(s.photoId) : 0,
+                    transform: `scale(${window.coverScale ? window.coverScale(s.photoId) : 1})`, transformOrigin: "bottom center" }}
+                  placeholder=" "></image-slot>
+              </div>
+              <span style={{ minHeight: 28, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center",
+                fontFamily: "var(--f-journal)", fontSize: 12, lineHeight: 1.2, fontWeight: on ? 700 : 600,
+                color: on ? s.deep : "var(--ink)", overflowWrap: "anywhere" }}>{s.species}</span>
             </button>
           );
         })}

@@ -27,4 +27,18 @@ for (const forbidden of ["AI 识别完成", "置信度 92%", "function ObCapture
   if (onboarding.includes(forbidden)) throw new Error(`obsolete recognition flow remains: ${forbidden}`);
 }
 
+const pickerStart = onboarding.indexOf("function ObSpeciesPicker");
+const pickerEnd = onboarding.indexOf("/* ---------- 3", pickerStart);
+const picker = onboarding.slice(pickerStart, pickerEnd);
+for (const required of [
+  "repeat(3, minmax(0, 1fr))",
+  'data-picker-card="cover"',
+  "transparent-frame",
+  "window.coverScale",
+  "window.coverOffsetY",
+]) {
+  if (!picker.includes(required)) throw new Error(`missing homepage-style picker marker: ${required}`);
+}
+if (picker.includes("PlantAvatar")) throw new Error("picker must not use circular PlantAvatar cards");
+
 console.log("SPECIES_LIBRARY_OK");
