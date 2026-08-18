@@ -232,15 +232,52 @@ input, textarea { font-family: inherit; }
 @keyframes critFlap  { from { transform: rotate(6deg); } to { transform: rotate(-26deg); } }
 @keyframes critBob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
 
-/* ---- onboarding: soul-generation animation ---- */
-@keyframes auraPulse { 0%,100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.14); opacity: .95; } }
-@keyframes ringExpand { 0% { transform: scale(.35); opacity: .85; } 100% { transform: scale(1.7); opacity: 0; } }
-@keyframes spriteEmerge { 0% { transform: scale(.4) translateY(14px); opacity: 0; } 55% { transform: scale(1.1) translateY(0); opacity: 1; } 100% { transform: scale(1); } }
-@keyframes floatUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 18% { opacity: 1; } 100% { transform: translateY(-110px) scale(1); opacity: 0; } }
+/* ---- onboarding: the first diary page is written ---- */
+@keyframes diaryPaperIn {
+  from { opacity: 0; transform: translateY(14px) rotate(-.7deg) scale(.985); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes diaryWriteIn {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(3px); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+@keyframes diaryInkDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes diaryPlantReveal {
+  0% { opacity: .2; clip-path: inset(100% 0 0 0); transform: translateY(9px); }
+  72% { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+  86% { transform: translateY(-2px) rotate(-.35deg); }
+  100% { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0) rotate(0); }
+}
+@keyframes diaryStampIn {
+  0% { opacity: 0; transform: rotate(-13deg) scale(.72); }
+  70% { opacity: 1; transform: rotate(-5deg) scale(1.06); }
+  100% { opacity: 1; transform: rotate(-7deg) scale(1); }
+}
+@keyframes diaryMoteDrift {
+  0% { opacity: 0; transform: translate(0, 8px) scale(.5); }
+  28% { opacity: .62; }
+  100% { opacity: 0; transform: translate(var(--mote-x, 8px), -30px) scale(1); }
+}
+.diary-birth-sheet { animation: diaryPaperIn .65s cubic-bezier(.2,.72,.24,1) both; }
+.diary-write-in { animation: diaryWriteIn .82s cubic-bezier(.22,.7,.22,1) .38s both; }
+.diary-name-write { animation-delay: .72s; }
+.diary-ink-line { transform-origin: left center; animation: diaryInkDraw .7s cubic-bezier(.2,.72,.25,1) 1.02s both; }
+.diary-plant-reveal { animation: diaryPlantReveal 1.42s cubic-bezier(.2,.68,.2,1) 1.12s both; }
+.diary-leaf-stamp { animation: diaryStampIn .55s cubic-bezier(.18,.8,.25,1.15) 2.34s both; }
+.diary-mote { animation: diaryMoteDrift 1.65s ease-out var(--mote-delay, .4s) infinite; }
 @keyframes scanMove { 0% { top: 4%; } 100% { top: 92%; } }
 @keyframes softFade { from { transform: translateY(8px); } to { transform: none; } }
 .soft-fade { animation: softFade .5s ease both; }
 @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .diary-birth-sheet, .diary-write-in, .diary-ink-line, .diary-plant-reveal, .diary-leaf-stamp, .diary-mote {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .diary-mote { display: none; }
+}
 
 /* ===== immersive weather header ===== */
 .sky { position: relative; overflow: hidden; }

@@ -214,11 +214,11 @@ function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
 
 /* ---------- 4 · soul generation animation ---------- */
 function ObGenerate({ sp, name, traits, setOpener, onNext }) {
-  const lines = ["正在为它注入灵魂…", "它第一次睁开眼睛…", `它认出了你 —— 它的主人…`, "它好像，想跟你说点什么…"];
+  const lines = ["正在写下相遇的第一天……", "从今天起，它住进你的日记里了"];
   const [li, setLi] = useState(0);
 
   useEffect(() => {
-    const iv = setInterval(() => setLi(i => (i + 1) % lines.length), 1100);
+    const phaseTimer = setTimeout(() => setLi(1), 1750);
 
     const sys = `你是一盆名叫「${name.trim() || "小绿"}」的${sp.species}，是主人新养的一盆真实植物的灵魂，性格：${traits.join("、")}。${sp.care}。现在你和主人第一次见面。用中文说一句简短、符合你性格的开场白，像第一次打招呼，1～2 句，不超过 35 字，不要解释、不要引号。`;
     const fallback = window.firstLineFallback[sp.species] || "你好呀，第一次见面，请多关照～";
@@ -236,42 +236,72 @@ function ObGenerate({ sp, name, traits, setOpener, onNext }) {
 
     Promise.all([ai, wait]).then(([line]) => {
       setOpener(line);
-      clearInterval(iv);
       onNext();
     });
-    return () => clearInterval(iv);
+    return () => clearTimeout(phaseTimer);
   }, []);
 
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", padding: "0 36px" }}>
-      <div style={{ position: "relative", width: 220, height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* aura */}
-        <div style={{ position: "absolute", width: 180, height: 180, borderRadius: "50%",
-          background: `radial-gradient(circle, ${sp.accent}55, transparent 70%)`, animation: "auraPulse 2s ease-in-out infinite" }}></div>
-        {/* rings */}
-        {[0, 0.6, 1.2].map((d, i) => (
-          <div key={i} style={{ position: "absolute", width: 150, height: 150, borderRadius: "50%",
-            border: `1.5px solid ${sp.accent}`, animation: `ringExpand 1.8s ease-out ${d}s infinite` }}></div>
+      alignItems: "center", justifyContent: "center", padding: "22px 28px 30px",
+      background: `radial-gradient(circle at 50% 42%, ${sp.soft}80 0%, transparent 47%)` }}>
+      <div data-motion-stage="diary-birth-sheet" className="diary-birth-sheet" style={{
+        position: "relative", width: "100%", maxWidth: 300, height: 354, borderRadius: 24, overflow: "hidden",
+        background: "linear-gradient(145deg, rgba(255,253,247,.98), rgba(248,241,227,.98))",
+        border: "1px solid rgba(114,91,57,.14)", boxShadow: "0 22px 48px rgba(70,55,36,.14), 0 2px 8px rgba(70,55,36,.06)" }}>
+        <div aria-hidden="true" style={{ position: "absolute", inset: "19px 18px 18px",
+          background: "repeating-linear-gradient(180deg, transparent 0, transparent 35px, rgba(101,85,61,.075) 36px, transparent 37px)",
+          maskImage: "linear-gradient(180deg, transparent, #000 14%, #000 90%, transparent)" }}></div>
+        <div style={{ position: "absolute", top: 24, left: 25, right: 25, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span className="diary-write-in" style={{ fontFamily: "var(--f-script)", fontSize: 15, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
+            第 1 天 · 今天
+          </span>
+          <span data-motion-stage="diary-leaf-stamp" className="diary-leaf-stamp" style={{
+            display: "inline-flex", alignItems: "center", gap: 3, padding: "4px 7px", borderRadius: 10,
+            border: `1px solid ${sp.deep}88`, color: sp.deep, fontFamily: "var(--f-journal)", fontSize: 10,
+            transform: "rotate(-7deg)" }}>
+            <Icon name="leaf" size={11} color={sp.deep} /> 住进来
+          </span>
+        </div>
+
+        <div className="diary-write-in diary-name-write" style={{ position: "absolute", top: 61, left: 25, right: 25,
+          fontFamily: "var(--f-journal)", fontSize: 25, fontWeight: 650, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden" }}>
+          <span style={{ color: sp.deep }}>{name.trim() || "它"}</span>
+          <span style={{ marginLeft: 7, fontSize: 13, fontWeight: 400, color: "var(--ink-faint)" }}>{sp.species}</span>
+        </div>
+        <div data-motion-stage="diary-ink-line" className="diary-ink-line" style={{ position: "absolute", top: 103, left: 25, right: 25,
+          height: 1.5, borderRadius: 2, background: `linear-gradient(90deg, ${sp.deep}, ${sp.accent}88 78%, transparent)` }}></div>
+
+        <div data-motion-stage="diary-plant-reveal" className="diary-plant-reveal" style={{
+          position: "absolute", left: 28, right: 28, top: 112, bottom: 36, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ position: "absolute", left: "9%", right: "9%", bottom: 3, height: 20, borderRadius: "50%",
+            background: `radial-gradient(ellipse, ${sp.soft}cc 0%, transparent 72%)`, filter: "blur(4px)" }}></div>
+          <image-slot id={`birth-${sp.photoId}`} shape="rounded" radius="3" transparent-frame=""
+            src={window.cutFor ? window.cutFor(sp.photoId) : window.photoFor(sp.photoId)} fit="contain" position="50% 100%"
+            style={{ width: "100%", height: 205, display: "block", position: "relative", zIndex: 1,
+              top: window.coverOffsetY ? window.coverOffsetY(sp.photoId) : 0,
+              transform: `scale(${window.coverScale ? window.coverScale(sp.photoId) : 1})`, transformOrigin: "bottom center" }}
+            placeholder=" "></image-slot>
+        </div>
+
+        {[{ left: "17%", bottom: 92, mx: "12px", d: ".35s" }, { left: "76%", bottom: 126, mx: "-9px", d: ".75s" }, { left: "69%", bottom: 63, mx: "7px", d: "1.05s" }].map((m, i) => (
+          <span key={i} className="diary-mote" aria-hidden="true" style={{ position: "absolute", left: m.left, bottom: m.bottom,
+            width: i === 1 ? 4 : 3, height: i === 1 ? 4 : 3, borderRadius: "50%", background: sp.accent,
+            boxShadow: `0 0 8px ${sp.accent}99`, "--mote-x": m.mx, "--mote-delay": m.d }}></span>
         ))}
-        {/* particles */}
-        {[...Array(8)].map((_, i) => (
-          <span key={i} style={{ position: "absolute", bottom: 70, left: `${22 + i * 7}%`, width: 6, height: 6, borderRadius: "50%",
-            background: sp.accent, animation: `floatUp 2.4s ease-in ${i * 0.28}s infinite` }}></span>
-        ))}
-        {/* the sprite emerging */}
-        <div style={{ position: "relative", zIndex: 2, animation: "spriteEmerge 1.1s cubic-bezier(.2,.7,.3,1) both" }}>
-          <div style={{ animation: "breathe 2.4s ease-in-out 1.1s infinite" }}>
-            <PlantSprite shape={sp.shape} color={sp.deep} pot={sp.pot} h={104} />
-          </div>
+
+        <div style={{ position: "absolute", left: 25, right: 25, bottom: 18, display: "flex", alignItems: "center", gap: 8,
+          color: "var(--ink-faint)", fontFamily: "var(--f-script)", fontSize: 11 }}>
+          <span style={{ flex: 1, height: 1, background: "rgba(103,84,57,.12)" }}></span>
+          花花日记本
+          <span style={{ flex: 1, height: 1, background: "rgba(103,84,57,.12)" }}></span>
         </div>
       </div>
 
-      <div key={li} className="soft-fade" style={{ marginTop: 26, fontFamily: "var(--f-journal)", fontSize: 18,
-        color: "var(--ink)", textAlign: "center", minHeight: 26 }}>
+      <div key={li} className="soft-fade" style={{ marginTop: 22, fontFamily: "var(--f-journal)", fontSize: 16,
+        color: "var(--ink-soft)", textAlign: "center", minHeight: 24 }}>
         {lines[li]}
       </div>
-      <div style={{ marginTop: 8, fontFamily: "var(--f-script)", fontSize: 17, color: sp.deep }}>{name.trim() || "它"}，{sp.species}</div>
     </div>
   );
 }
