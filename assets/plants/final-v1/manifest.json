@@ -1,0 +1,31 @@
+{
+  "version": "final-v1",
+  "canvas": { "width": 1000, "height": 1240, "potBottomY": 1160 },
+  "assets": [
+    { "id": "lvluo", "name": "绿萝", "pot": "燕麦色圆肚陶瓷盆", "src": "assets/plants/final-v1/lvluo.png" },
+    { "id": "guibeizhu", "name": "龟背竹", "pot": "暖灰宽口陶瓷盆", "src": "assets/plants/final-v1/guibeizhu.png" },
+    { "id": "diaolan", "name": "吊兰", "pot": "米白高脚碗盆", "src": "assets/plants/final-v1/diaolan.png" },
+    { "id": "facaishu", "name": "发财树", "pot": "柔和紫砂六方盆", "src": "assets/plants/final-v1/facaishu.png" },
+    { "id": "fuguizhu", "name": "富贵竹", "pot": "灰青直筒瓷盆", "src": "assets/plants/final-v1/fuguizhu.png" },
+    { "id": "xianrenzhang", "name": "仙人掌", "pot": "低饱和陶土盆", "src": "assets/plants/final-v1/xianrenzhang.png" },
+    { "id": "duorou", "name": "多肉植物", "pot": "藕粉浅口碗盆", "src": "assets/plants/final-v1/duorou.png" },
+    { "id": "hupilan", "name": "虎皮兰", "pot": "暖米白脊纹重盆", "src": "assets/plants/final-v1/hupilan.png" },
+    { "id": "luhui", "name": "芦荟", "pot": "深灰陨石盆", "src": "assets/plants/final-v1/luhui.png" },
+    { "id": "jinqianshu", "name": "金钱树", "pot": "炭灰高脚收口盆", "src": "assets/plants/final-v1/jinqianshu.png" },
+    { "id": "hudielan", "name": "蝴蝶兰", "pot": "雾白带孔陶瓷盆", "src": "assets/plants/final-v1/hudielan.png" },
+    { "id": "changshouhua", "name": "长寿花", "pot": "灰粉圆肚釉盆", "src": "assets/plants/final-v1/changshouhua.png" },
+    { "id": "yueji", "name": "月季", "pot": "旧陶土翻边盆", "src": "assets/plants/final-v1/yueji.png" },
+    { "id": "zhizihua", "name": "栀子花", "pot": "淡青莲瓣盆", "src": "assets/plants/final-v1/zhizihua.png" },
+    { "id": "molihua", "name": "茉莉花", "pot": "暖白青灰边瓷盆", "src": "assets/plants/final-v1/molihua.png" },
+    { "id": "wenzhu", "name": "文竹", "pot": "墨灰浅口山水盆", "src": "assets/plants/final-v1/wenzhu.png" },
+    { "id": "baizhang", "name": "白掌", "pot": "沙米色圆润陶盆", "src": "assets/plants/final-v1/baizhang.png" },
+    { "id": "hongzhang", "name": "红掌", "pot": "暗砖红简口盆", "src": "assets/plants/final-v1/hongzhang.png" },
+    { "id": "junzilan", "name": "君子兰", "pot": "深棕紫砂敞口盆", "src": "assets/plants/final-v1/junzilan.png" },
+    { "id": "xiangrikui", "name": "向日葵", "pot": "赭黄陶土盆", "src": "assets/plants/final-v1/xiangrikui.png" },
+    { "id": "bohe", "name": "薄荷", "pot": "暖米白香草盆", "src": "assets/plants/final-v1/bohe.png" },
+    { "id": "xianrenqiu", "name": "仙人球", "pot": "低饱和小陶土盆", "src": "assets/plants/final-v1/xianrenqiu.png" },
+    { "id": "lanmeishu", "name": "小型蓝莓树", "pot": "灰蓝高筒盆", "src": "assets/plants/final-v1/lanmeishu.png" },
+    { "id": "xiuqiuhua", "name": "绣球花", "pot": "雾蓝灰宽口盆", "src": "assets/plants/final-v1/xiuqiuhua.png" },
+    { "id": "zhubai", "name": "小型竹柏", "pot": "深灰紫砂浅盆", "src": "assets/plants/final-v1/zhubai.png" }
+  ]
+}

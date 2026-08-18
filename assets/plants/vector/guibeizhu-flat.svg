@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1240" viewBox="0 0 1000 1240" fill="none">
+  <defs>
+    <mask id="monstera-cutouts" maskUnits="userSpaceOnUse" x="-190" y="-270" width="380" height="500">
+      <path fill="#fff" d="M0 205C-116 148-157 18-123-111C-94-222 20-273 106-198C187-128 170 40 101 137C69 181 32 203 0 205Z"/>
+      <g fill="#000">
+        <rect x="-170" y="-94" width="104" height="30" rx="15" transform="rotate(10 -170 -94)"/>
+        <rect x="-154" y="15" width="108" height="29" rx="14.5" transform="rotate(-4 -154 15)"/>
+        <rect x="63" y="-114" width="110" height="30" rx="15" transform="rotate(-12 63 -114)"/>
+        <rect x="50" y="8" width="116" height="29" rx="14.5" transform="rotate(7 50 8)"/>
+        <ellipse cx="-38" cy="-82" rx="18" ry="45" transform="rotate(-15 -38 -82)"/>
+        <ellipse cx="39" cy="-92" rx="17" ry="41" transform="rotate(17 39 -92)"/>
+      </g>
+    </mask>
+    <g id="monstera-leaf">
+      <path fill="#476E55" mask="url(#monstera-cutouts)" d="M0 205C-116 148-157 18-123-111C-94-222 20-273 106-198C187-128 170 40 101 137C69 181 32 203 0 205Z"/>
+    </g>
+    <mask id="monstera-young-cutouts" maskUnits="userSpaceOnUse" x="-190" y="-270" width="380" height="500">
+      <path fill="#fff" d="M0 205C-116 148-157 18-123-111C-94-222 20-273 106-198C187-128 170 40 101 137C69 181 32 203 0 205Z"/>
+      <g fill="#000">
+        <rect x="-166" y="-38" width="105" height="29" rx="14.5" transform="rotate(5 -166 -38)"/>
+        <rect x="57" y="-49" width="110" height="29" rx="14.5" transform="rotate(-6 57 -49)"/>
+      </g>
+    </mask>
+    <g id="monstera-leaf-young">
+      <path fill="#476E55" mask="url(#monstera-young-cutouts)" d="M0 205C-116 148-157 18-123-111C-94-222 20-273 106-198C187-128 170 40 101 137C69 181 32 203 0 205Z"/>
+    </g>
+  </defs>
+
+  <g stroke="#667B5E" stroke-width="23" stroke-linecap="round">
+    <path d="M500 918C494 760 500 615 500 510"/>
+    <path d="M488 924C431 805 369 701 302 626"/>
+    <path d="M512 922C568 798 635 681 706 604"/>
+    <path d="M476 927C420 864 350 817 274 791"/>
+    <path d="M525 927C587 862 654 817 730 797"/>
+  </g>
+
+  <g>
+    <use href="#monstera-leaf" transform="translate(500 515) scale(.88)"/>
+    <use href="#monstera-leaf" transform="translate(304 630) rotate(-38) scale(.76)"/>
+    <use href="#monstera-leaf" transform="translate(704 608) rotate(35) scale(.77)"/>
+    <use href="#monstera-leaf-young" transform="translate(276 794) rotate(-54) scale(.61)"/>
+    <use href="#monstera-leaf-young" transform="translate(728 800) rotate(53) scale(.60)"/>
+    <ellipse cx="454" cy="335" rx="24" ry="38" fill="#7F9A76" transform="rotate(-25 454 335)"/>
+  </g>
+
+  <ellipse cx="500" cy="910" rx="230" ry="57" fill="#827767"/>
+  <path fill="#AAA396" d="M275 912H725L700 1128C697 1160 674 1180 643 1180H357C326 1180 303 1160 300 1128L275 912Z"/>
+  <path fill="#C9C1B4" d="M275 912C275 880 376 855 500 855C624 855 725 880 725 912C725 944 624 969 500 969C376 969 275 944 275 912ZM329 912C329 929 406 943 500 943C594 943 671 929 671 912C671 895 594 881 500 881C406 881 329 895 329 912Z" fill-rule="evenodd"/>
+  <ellipse cx="372" cy="1035" rx="42" ry="92" fill="#C8C0B2"/>
+</svg>

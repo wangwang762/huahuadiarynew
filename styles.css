@@ -1,0 +1,271 @@
+/* ============================================================
+   花花日记本 · Design System — "Editorial Botanical" magazine
+   Cream paper · sharp Song/Playfair serif mastheads · pine green
+   · acid-lime highlight. (Self-contained palette, no DDMC color.)
+   ============================================================ */
+
+/* ---- Fonts (must precede all other rules) ---- */
+@import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css");
+@import url("https://fonts.googleapis.com/css2?family=Long+Cang&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&display=swap");
+
+/* ---- Brand display font (numbers) from DDMC ---- */
+@font-face {
+  font-family: "DdmcSans";
+  src: url("fonts/DdmcSans-Bold.otf") format("opentype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "DdmcSans";
+  src: url("fonts/DdmcSans-Medium.otf") format("opentype");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+
+:root {
+  /* ---- Paper / surface (editorial cream) ---- */
+  --paper:        #F1EADB;   /* app canvas — warm cream */
+  --paper-deep:   #E8DDC8;   /* deeper cream */
+  --paper-card:   #FBF6EB;   /* solid card on paper */
+  --glass:        rgba(251, 246, 235, 0.86);  /* card fill */
+  --glass-strong: rgba(251, 246, 235, 0.94);
+  --ink:          #221F18;   /* near-black warm */
+  --ink-soft:     #6B6256;   /* secondary */
+  --ink-faint:    #A99E8B;   /* captions */
+  --hairline:     rgba(34, 31, 24, 0.14);
+  --rule:         rgba(34, 31, 24, 0.82);
+
+  /* ---- Primary accent — pine green (kept under --green* names) ---- */
+  --green:        #2C6147;   /* pine — buttons / active */
+  --green-deep:   #1E4632;
+  --green-forest: #163525;
+  --green-night:  #0C2014;
+  --green-soft:   #DBE5D2;   /* soft sage tint */
+  --green-bubble: #E7EEDF;   /* speech bubble */
+  --green-grad:   linear-gradient(180deg, #357355 0%, #234B36 100%);
+
+  /* ---- Acid-lime highlight (the punchy editorial accent) ---- */
+  --lime:         #E6E24F;   /* highlighter / today markers */
+  --lime-deep:    #C7C32C;
+  --lime-soft:    #F0EE9E;
+
+  /* ---- Warm accents ---- */
+  --coral:        #C8553C;   /* emphasis words in serif copy */
+  --coral-soft:   #E0917E;
+  --gold:         #D7A23F;
+  --gold-2:       #F0D58A;
+  --gold-grad:    linear-gradient(180deg, #F0D58A 0%, #D7A23F 100%);
+  --terra:        #BE7B33;   /* warm earth — "needs care" */
+
+  /* ---- Radii (sharper, editorial) ---- */
+  --r-sm: 5px;  --r-md: 8px;  --r-lg: 11px;  --r-xl: 14px;  --r-2xl: 18px;
+  --r-pill: 999px;
+
+  /* ---- Shadows (light, print-like) ---- */
+  --sh-1: 0 1px 4px rgba(60, 45, 25, 0.06);
+  --sh-2: 0 6px 18px rgba(60, 45, 25, 0.09);
+  --sh-3: 0 16px 40px rgba(50, 38, 22, 0.14);
+  --sh-card: 0 8px 26px rgba(60, 45, 25, 0.10), 0 1px 3px rgba(60,45,25,0.05);
+
+  /* ---- Fonts ---- */
+  --f-journal: "Noto Serif SC", "Songti SC", serif;          /* editorial Song — headlines & quotes */
+  --f-serif:   "Noto Serif SC", "Songti SC", serif;
+  --f-display: "Playfair Display", "Noto Serif SC", serif;   /* Latin masthead / editorial numerals */
+  --f-hand:    "LXGW WenKai", "Noto Serif SC", serif;        /* warm handwriting touch */
+  --f-script:  "Long Cang", "LXGW WenKai", cursive;
+  --f-ui:      "PingFang SC", "Noto Sans SC", -apple-system, system-ui, sans-serif;
+  --f-num:     "DdmcSans", "PingFang SC", -apple-system, system-ui, sans-serif;  /* clean lining figures */
+}
+
+/* numbers: lining + tabular so they align with text and each other */
+.f-num, [style*="--f-num"] { font-variant-numeric: lining-nums tabular-nums; }
+
+/* ---- editorial helpers ---- */
+.kicker { font-family: var(--f-ui); font-size: 10.5px; letter-spacing: 2.4px;
+  text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.rule { height: 1px; background: var(--rule); }
+.hairrule { height: 1px; background: var(--hairline); }
+.mast { font-family: var(--f-serif); font-weight: 700; color: var(--ink); letter-spacing: -0.5px; }
+.hl { background: linear-gradient(180deg, transparent 58%, var(--lime) 58%, var(--lime) 92%, transparent 92%); }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: var(--f-ui);
+  color: var(--ink);
+  background: #E7D9C4;
+}
+
+/* page (the area behind the phone) */
+.stage {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #F1E4D0 0%, #E4D4BD 55%, #DBC8AC 100%);
+  padding: 28px 0;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; }
+
+/* ---- The paper canvas that fills the phone screen ---- */
+.canvas {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, #F5EFE2 0%, var(--paper) 30%, var(--paper) 100%);
+  overflow: hidden;
+}
+/* faint paper grain */
+.canvas::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0, transparent 0.6px),
+    radial-gradient(circle at 70% 65%, rgba(120,90,50,0.04) 0, transparent 0.7px);
+  background-size: 7px 7px, 11px 11px;
+  opacity: 0.5;
+}
+
+/* ---- paper card ---- */
+.glass-card {
+  position: relative;
+  background: var(--paper-card);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--sh-card);
+}
+
+/* ---- Journal serif copy with highlight spans ---- */
+.serif {
+  font-family: var(--f-journal);
+  color: var(--ink);
+  line-height: 1.62;
+  font-feature-settings: "palt" 1;
+}
+.serif em { font-style: normal; color: var(--coral); }
+.serif .grn { color: var(--green-deep); font-weight: 600; }
+
+.sig {
+  font-family: var(--f-script);
+  color: var(--ink-soft);
+}
+
+/* ---- pill buttons ---- */
+.btn-green {
+  background: var(--green-grad);
+  color: #fff;
+  border-radius: var(--r-pill);
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(30,70,50,0.26);
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn-green:active { transform: scale(0.97); filter: brightness(0.94); }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.5);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  transition: transform .12s ease;
+}
+.btn-ghost:active { transform: scale(0.97); }
+
+/* circular nav (reference) */
+.fab {
+  width: 60px; height: 60px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #2B2722; color: #fff;
+  box-shadow: 0 14px 30px rgba(43,39,34,0.40);
+  transition: transform .14s ease;
+}
+.fab:active { transform: scale(0.92); }
+
+/* polaroid / snapshot frame */
+.snap {
+  background: #fff;
+  padding: 5px;
+  border-radius: 3px;
+  box-shadow: var(--sh-2);
+}
+.snap image-slot { display: block; }
+
+/* tiny attribute badge */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  font-family: var(--f-ui);
+}
+
+/* hide scrollbars in scroll areas but keep scroll */
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+/* fade/slide entrance — transform-only so content is never captured/exported at opacity:0 */
+@keyframes riseIn { from { transform: translateY(12px); } to { transform: none; } }
+@keyframes fadeIn { from { transform: scale(0.99); } to { transform: none; } }
+@keyframes pop { 0% { transform: scale(0.9); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+.rise { animation: riseIn .5s cubic-bezier(.2,.7,.3,1) both; }
+.fadein { animation: fadeIn .3s ease both; }
+
+@keyframes sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+/* body-only sway: amplitude per plant via --amp, pivots at the soil line */
+@keyframes swayBody { from { transform: rotate(calc(-1 * var(--amp, 2deg))); } to { transform: rotate(var(--amp, 2deg)); } }
+
+/* ---- widget weather effects ---- */
+@keyframes wxFall { from { transform: translateY(-45%); } to { transform: translateY(420%); } }
+@keyframes wxGlow { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+@keyframes wxSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes wxMote { 0% { transform: translate(0,0); opacity: 0; } 18% { opacity: .85; } 100% { transform: translate(var(--mx,6px),-46px); opacity: 0; } }
+@keyframes wxDrift { from { transform: translateX(-45%); } to { transform: translateX(150%); } }
+@keyframes wxMorph { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.18,0.9); } }
+@keyframes wxBand { from { transform: translateX(-50%); } to { transform: translateX(0%); } }
+@keyframes wxRipple { 0% { transform: scale(.4); opacity: .5; } 100% { transform: scale(1.6); opacity: 0; } }
+
+/* ---- widget critters (bee / butterfly / bird) ---- */
+@keyframes critWingL { from { transform: rotateY(0deg); } to { transform: rotateY(62deg); } }
+@keyframes critWingR { from { transform: rotateY(0deg); } to { transform: rotateY(-62deg); } }
+/* butterfly flying edge-on: wings clap almost shut so you see them side-on */
+@keyframes critWingLV { from { transform: rotateY(58deg); } to { transform: rotateY(86deg); } }
+@keyframes critWingRV { from { transform: rotateY(-58deg); } to { transform: rotateY(-86deg); } }
+@keyframes critFlap  { from { transform: rotate(6deg); } to { transform: rotate(-26deg); } }
+@keyframes critBob   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+
+/* ---- onboarding: soul-generation animation ---- */
+@keyframes auraPulse { 0%,100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.14); opacity: .95; } }
+@keyframes ringExpand { 0% { transform: scale(.35); opacity: .85; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes spriteEmerge { 0% { transform: scale(.4) translateY(14px); opacity: 0; } 55% { transform: scale(1.1) translateY(0); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes floatUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 18% { opacity: 1; } 100% { transform: translateY(-110px) scale(1); opacity: 0; } }
+@keyframes scanMove { 0% { top: 4%; } 100% { top: 92%; } }
+@keyframes softFade { from { transform: translateY(8px); } to { transform: none; } }
+.soft-fade { animation: softFade .5s ease both; }
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+/* ===== immersive weather header ===== */
+.sky { position: relative; overflow: hidden; }
+.sky-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+@keyframes rainfall { 0% { transform: translateY(-24px); opacity: 0; } 12% { opacity: .55; } 100% { transform: translateY(280px); opacity: 0; } }
+.raindrop { position: absolute; top: 0; width: 1.5px; border-radius: 2px;
+  background: linear-gradient(180deg, rgba(110,130,155,0), rgba(95,115,140,.55)); animation: rainfall linear infinite; }
+
+@keyframes moteUp { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: .8; } 100% { transform: translateY(-46px); opacity: 0; } }
+.mote { position: absolute; width: 5px; height: 5px; border-radius: 50%;
+  background: radial-gradient(circle, #fff6d8, rgba(255,246,216,0)); animation: moteUp ease-in infinite; }
+
+@keyframes cloudDrift { from { transform: translateX(-12px); } to { transform: translateX(16px); } }
+.cloud-blob { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.5);
+  filter: blur(6px); animation: cloudDrift ease-in-out infinite alternate; }
+
+/* ===== title treatments ===== */
+.app-title-light { font-family: var(--f-journal); font-weight: 500; font-size: 33px; letter-spacing: 2px; color: var(--ink); }
+.app-title-hand  { font-family: var(--f-hand); font-weight: 700; font-size: 38px; letter-spacing: 3px; color: var(--ink); }
+.app-sub-en { font-family: var(--f-ui); font-size: 9px; letter-spacing: 3.4px; text-transform: uppercase; color: var(--ink-faint); margin-top: 4px; }
+
+/* typing dots */
+@keyframes blink { 0%,80%,100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
+.dot:nth-child(1){ animation: blink 1.2s infinite .0s; }
+.dot:nth-child(2){ animation: blink 1.2s infinite .2s; }
+.dot:nth-child(3){ animation: blink 1.2s infinite .4s; }

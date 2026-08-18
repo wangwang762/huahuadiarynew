@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>花花日记本 · 产品逻辑与 AI 方案</title>
+<style>
+  :root {
+    --ink: #2b2a26;
+    --ink-soft: #55524b;
+    --ink-faint: #8a857c;
+    --green: #2C6147;
+    --green-deep: #1d4a34;
+    --line: #e3ddd0;
+    --paper: #ffffff;
+    --code-bg: #f6f3ea;
+    --accent-bg: #f3f5ee;
+    --warn-bg: #fbf2e6;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #ECE7DA;
+    font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .page {
+    max-width: 816px;
+    margin: 32px auto;
+    background: var(--paper);
+    padding: 70px 72px;
+    box-shadow: 0 2px 16px rgba(60,45,25,0.10);
+    border-radius: 3px;
+  }
+  .page + .page { margin-top: 0; }
+
+  /* ---- masthead ---- */
+  .mast { border-bottom: 2.5px solid var(--green); padding-bottom: 20px; margin-bottom: 12px; }
+  .kicker { font-size: 12px; letter-spacing: .28em; text-transform: uppercase; color: var(--green); font-weight: 700; font-family: Georgia, serif; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 12px 0 8px; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 15.5px; font-style: italic; margin: 0; }
+  .meta { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; font-size: 12.5px; color: var(--ink-faint); font-family: Georgia, serif; letter-spacing: .02em; }
+  .meta b { color: var(--ink-soft); font-weight: 600; }
+
+  h2 { font-size: 22px; margin: 44px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); letter-spacing: -0.01em; }
+  h2 .num { color: var(--green); font-family: Georgia, serif; margin-right: 12px; font-weight: 700; }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 { font-size: 16.5px; margin: 26px 0 6px; color: var(--green-deep); }
+  h4 { font-size: 14px; margin: 18px 0 4px; color: var(--ink); letter-spacing: .02em; }
+  p { margin: 8px 0; }
+  .lead { color: var(--ink-soft); font-size: 15.5px; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  li::marker { color: var(--green); }
+  strong { font-weight: 700; }
+  em { color: var(--ink-soft); }
+  code { font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; color: var(--green-deep); }
+
+  /* ---- callout blocks ---- */
+  .box { background: var(--accent-bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+  .box.warn { background: var(--warn-bg); border-color: #ecd9bd; }
+  .box .label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--green); font-family: Georgia, serif; margin-bottom: 6px; }
+  .box.warn .label { color: #b5762a; }
+
+  /* ---- prompt template block ---- */
+  .prompt { background: #2b2a26; color: #e8e3d6; border-radius: 8px; padding: 18px 20px; margin: 14px 0; font-family: "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: 12px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: break-word; }
+  .prompt .pt { color: #8fcf9e; }
+  .prompt .pv { color: #e3c98b; }
+  .prompt .pc { color: #8a857c; font-style: italic; }
+  .prompt-cap { font-size: 11.5px; color: var(--ink-faint); margin: 4px 0 0; font-family: Georgia, serif; letter-spacing: .03em; }
+
+  /* ---- flow / pipeline ---- */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+  .flow .step { flex: 1; min-width: 120px; background: var(--accent-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; position: relative; }
+  .flow .step .n { font-size: 10.5px; font-family: Georgia, serif; color: var(--green); font-weight: 700; letter-spacing: .1em; }
+  .flow .step .t { font-size: 13.5px; font-weight: 700; margin-top: 2px; }
+  .flow .step .d { font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; line-height: 1.45; }
+  .flow .arrow { display: flex; align-items: center; padding: 0 7px; color: var(--green); font-size: 18px; }
+
+  /* ---- tables ---- */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--green); font-family: Georgia, serif; border-bottom: 1.5px solid var(--line); }
+  td code { font-size: 11.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ---- decision tree ---- */
+  .tree { font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; line-height: 1.8; background: var(--code-bg); border-radius: 8px; padding: 16px 20px; margin: 14px 0; white-space: pre-wrap; color: var(--ink); }
+  .tree b { color: var(--green-deep); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  .two-col .box { margin: 0; }
+
+  .toc { columns: 2; column-gap: 36px; font-size: 13.5px; margin: 18px 0 0; }
+  .toc a { color: var(--ink); text-decoration: none; display: block; padding: 4px 0; border-bottom: 1px dotted var(--line); }
+  .toc a span { color: var(--green); font-family: Georgia, serif; font-weight: 700; margin-right: 8px; }
+
+  .foot { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-faint); font-family: Georgia, serif; }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; border-radius: 0; margin: 0; padding: 0; max-width: none; }
+    @page { margin: 0.75in; }
+    h2, h3, h4 { break-after: avoid; }
+    .box, .prompt, .flow, table, .tree, li { break-inside: avoid; }
+    .prompt { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .toc { columns: 2; }
+  }
+  @media (max-width: 720px) {
+    .page { padding: 40px 26px; margin: 0; }
+    .two-col, .toc { grid-template-columns: 1fr; columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="mast">
+    <div class="kicker">Product Logic &middot; AI &amp; Technical Spec</div>
+    <h1>花花日记本 · 产品逻辑与 AI 方案</h1>
+    <p class="sub">从「看起来能用的原型」到「真能跑的产品」——补齐逻辑与知识层</p>
+    <div class="meta">
+      <span><b>用途</b>　开发交接 / Claude Code</span>
+      <span><b>版本</b>　v1.0 草案</span>
+      <span><b>配套</b>　花花日记本.html(可点击原型)</span>
+    </div>
+  </div>
+
+  <p class="lead">这份文档配套高保真原型,补齐原型里"假装能跑"的部分:用户真的拍照之后,系统如何生成那张好看的卡通形象、如何判断植物有没有毛病、问诊怎么走预设路径、养护建议从哪来、天气怎么接入。每个 AI 环节都附了<strong>可直接调用的提示词模板</strong>。</p>
+
+  <div class="box">
+    <div class="label">阅读顺序</div>
+    <div class="toc">
+      <a href="#arch"><span>00</span>系统架构总览</a>
+      <a href="#cartoon"><span>01</span>拍照 → 卡通形象生成</a>
+      <a href="#health"><span>02</span>健康识别与诊断决策</a>
+      <a href="#doctor"><span>03</span>花大夫问诊流程</a>
+      <a href="#care"><span>04</span>养护指南知识库</a>
+      <a href="#weather"><span>05</span>天气与定位接入</a>
+      <a href="#diary"><span>06</span>日记生成逻辑</a>
+      <a href="#data"><span>07</span>数据结构</a>
+      <a href="#deps"><span>08</span>外部依赖与 API 清单</a>
+    </div>
+  </div>
+
+  <h2 id="arch"><span class="num">00</span>系统架构总览</h2>
+  <p>三层:<strong>客户端</strong>(原型已实现的 UI/交互)、<strong>AI 服务层</strong>(视觉识别 + 对话 + 文案 + 生图)、<strong>外部 API</strong>(天气/定位/生图)。客户端尽量薄,核心智能都在服务端,这样 iOS 上架后调用合规、可控、可迭代。</p>
+
+  <div class="flow">
+    <div class="step"><div class="n">CLIENT</div><div class="t">iOS App</div><div class="d">拍照、展示日记、问诊对话、小组件</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">AI 服务层</div><div class="t">自有后端</div><div class="d">编排视觉模型 + LLM + 生图,挂知识库</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">EXTERNAL</div><div class="t">第三方 API</div><div class="d">天气、定位、图像生成</div></div>
+  </div>
+
+  <div class="box warn">
+    <div class="label">关于在 iOS 上调用</div>
+    <p style="margin:0">原型里的卡通形象目前是<strong>预制的 PNG 透明图</strong>(canvas 插画引擎只在开发期用)。上架后<strong>不能</strong>在端上实时跑插画引擎——应改为<strong>服务端生成</strong>:App 上传照片 → 后端调用生图 API → 返回成品图缓存到 CDN → 端上直接显示。生成是一次性的(建档时),不是每次打开都生成。</p>
+  </div>
+
+  <h2 id="cartoon"><span class="num">01</span>拍照 → 卡通形象生成</h2>
+  <p class="lead">目标:用户拍一张真实植物照片,生成一张<strong>风格统一、贴合该植物特征</strong>的可爱卡通形象(就是原型里那种暖色调、带盆、有接地投影的透明图)。</p>
+
+  <div class="flow">
+    <div class="step"><div class="n">STEP 1</div><div class="t">拍照上传</div><div class="d">建档时拍 1 张,引导对准整株</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">STEP 2</div><div class="t">视觉理解</div><div class="d">识别品种 + 提取特征(株型/叶形/颜色/盆)</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">STEP 3</div><div class="t">生图</div><div class="d">特征 → 提示词 → 风格化卡通图</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">STEP 4</div><div class="t">抠图缓存</div><div class="d">去背景 → 透明 PNG → CDN</div></div>
+  </div>
+
+  <h3>技术选型(两条路线)</h3>
+  <table>
+    <tr><th>路线</th><th>做法</th><th>优劣</th></tr>
+    <tr><td><strong>A. 文生图 + 特征描述</strong></td><td>视觉模型先把照片读成结构化特征,再拼成提示词喂给文生图模型</td><td>风格最统一可控;但"像不像本人"取决于特征描述精度</td></tr>
+    <tr><td><strong>B. 图生图 / 风格迁移</strong></td><td>直接把原照片 + 风格参考图喂给图生图模型(image-to-image),低 denoise 保留构图</td><td>更"像本人";但风格一致性需要固定参考图 + 参数</td></tr>
+  </table>
+  <p>推荐 <strong>B 为主、A 兜底</strong>:用图生图保证"是用户自己的植物",用一张固定的风格参考图(我们原型里的画风)锁定调性。下面的提示词同时给两段。</p>
+
+  <h4>① 视觉理解 → 结构化特征(提示词)</h4>
+  <div class="prompt"><span class="pc"># System</span>
+你是植物识别专家。看这张用户拍摄的盆栽照片,只输出 JSON,不要解释。
+<span class="pc"># 输出字段</span>
+{
+  <span class="pt">"species"</span>: <span class="pv">"最可能的中文品种名"</span>,
+  <span class="pt">"confidence"</span>: <span class="pv">0-1</span>,
+  <span class="pt">"shape"</span>: <span class="pv">"株型:仙人掌柱状/多肉莲座/藤蔓/大叶直立…"</span>,
+  <span class="pt">"leaf"</span>: <span class="pv">"叶形与颜色,如:深绿掌状有裂口"</span>,
+  <span class="pt">"pot"</span>: <span class="pv">"盆的颜色材质,如:陶土赤褐圆盆"</span>,
+  <span class="pt">"size_ratio"</span>: <span class="pv">"植株:盆 的高度比,如 2.2"</span>,
+  <span class="pt">"distinctive"</span>: <span class="pv">"最有辨识度的1-2个特征"</span>
+}</div>
+  <p class="prompt-cap">用途:建档识别品种(免用户填),并为生图提供精准特征。confidence 低于 0.6 时,在"填昵称"步骤让用户从候选品种里确认。</p>
+
+  <h4>② 图生图(image-to-image)参数 + 提示词</h4>
+  <div class="prompt"><span class="pc"># 输入</span>
+init_image: 用户照片        <span class="pc"># 构图来源</span>
+style_ref:  画风参考图.png  <span class="pc"># 固定:锁定我们的卡通调性</span>
+strength:   <span class="pv">0.55</span>            <span class="pc"># 保留原构图,又有足够风格化</span>
+
+<span class="pc"># Prompt</span>
+一株 <span class="pv">{species}</span> 盆栽的卡通插画,<span class="pv">{shape}</span>,<span class="pv">{leaf}</span>,
+种在<span class="pv">{pot}</span>里。温暖治愈的绘本风格,柔和的暖色调,
+干净的纯色背景,正面视角,完整露出植株顶部,
+底部有柔和的接地投影。扁平+轻微体积感,不要写实照片质感。
+
+<span class="pc"># Negative</span>
+照片写实, 多个植物, 文字水印, 杂乱背景, 裁切顶部, 阴森, 高饱和霓虹</div>
+  <p class="prompt-cap">关键:<code>strength≈0.55</code> 平衡"像本人"与"统一画风";Negative 里强调"不要裁切顶部"——原型里向日葵被切头就是这个问题。</p>
+
+  <div class="box">
+    <div class="label">STEP 4 · 抠图与规格</div>
+    <p style="margin:0">生图后用抠图模型(remove-background 类)去背景,导出<strong>透明 PNG</strong>;统一规格:植株底部对齐画布底边、四周留透明边距、长边 ≥ 1024px。<strong>按株型自适应缩放</strong>(高瘦的等比缩到合适、矮小的放大),与原型里小组件/封面的呈现逻辑对齐。成品存 CDN,数据库里只存 URL。</p>
+  </div>
+
+  <h2 id="health"><span class="num">02</span>健康识别与诊断决策</h2>
+  <p class="lead">目标:每次用户拍照后,AI 判断这株植物<strong>有没有毛病</strong>,据此决定这次是走"温情记录"还是"指路看医生"。这是整个 App 的分流中枢。</p>
+
+  <h3>判断依据(只看照片,不依赖用户自报浇水)</h3>
+  <p>产品已确定<strong>不做浇水打卡</strong>——用户记不清浇了多少、线上点了线下没浇都会失真。所以健康判断<strong>纯粹基于当下照片</strong>的可观测信号:</p>
+  <table>
+    <tr><th>观测部位</th><th>信号</th><th>可能问题</th></tr>
+    <tr><td>叶片</td><td>发黄、萎蔫、卷边、焦尖、斑点、徒长</td><td>缺水/过水/缺光/晒伤/病虫</td></tr>
+    <tr><td>茎干</td><td>发软、发黑、倒伏</td><td>烂根/过水</td></tr>
+    <tr><td>土壤</td><td>表面干裂 / 长期湿润发绿 / 长霉</td><td>缺水 / 过水</td></tr>
+    <tr><td>整体</td><td>与<strong>上次照片</strong>对比的变化趋势</td><td>恶化中 / 恢复中</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="label">为什么不强求上报浇水</div>
+    <p style="margin:0">把"是否需要照料"完全交给<strong>照片证据</strong>,而不是任务式打卡。App 定位是<strong>以拍照记录为主</strong>的成长相册,不是浇水提醒工具。用户高兴了就拍一张,AI 顺势判断、给反馈。这样既不失真,也没有任务压力。</p>
+  </div>
+
+  <h4>健康识别(提示词)</h4>
+  <div class="prompt"><span class="pc"># System</span>
+你是资深植物养护医师。对比这株 <span class="pv">{species}</span> 的本次照片
+<span class="pc">(可选:附上次照片做趋势对比)</span>,只输出 JSON。
+
+{
+  <span class="pt">"health"</span>: <span class="pv">"good | watch | sick"</span>,   <span class="pc"># 三档</span>
+  <span class="pt">"observations"</span>: [<span class="pv">"叶尖轻微发黄"</span>, …],
+  <span class="pt">"likely_cause"</span>: <span class="pv">"最可能的原因(口语)"</span>,
+  <span class="pt">"trend"</span>: <span class="pv">"better | same | worse | unknown"</span>,
+  <span class="pt">"route"</span>: <span class="pv">"record | soft_hint | diagnose"</span>,
+  <span class="pt">"confidence"</span>: <span class="pv">0-1</span>
+}</div>
+  <p class="prompt-cap"><code>route</code> 直接驱动客户端分流(见下方决策树)。</p>
+
+  <h3>分流决策树</h3>
+  <div class="tree"><b>拍照</b>
+ └─ 健康识别 → health / route
+     ├─ <b>good</b>        → route=<b>record</b>     → 生成温情记录日记(配情绪价值文案)
+     ├─ <b>watch</b>(小问题) → route=<b>soft_hint</b>  → 生成记录日记 + <b>弱弱的</b>「要不要让花大夫看看?」入口
+     └─ <b>sick</b>(明显问题) → route=<b>diagnose</b>   → 引导进入花大夫问诊
+</div>
+  <p><strong>soft_hint</strong> 是用户明确要求的状态:这次只想记录、不想被推去看病,但 AI 观测到了小问题——于是日记里<strong>低调地</strong>提一句"我看你最近叶子有点……要不要找大夫聊聊?",把决定权留给用户。</p>
+
+  <h2 id="doctor"><span class="num">03</span>花大夫问诊流程</h2>
+  <p class="lead">花大夫是一个<strong>有情绪价值的植物诊所</strong>。问诊像智能客服一样走<strong>预设路径 + 自由对话</strong>结合:既专业可靠,又有"活人感"。</p>
+
+  <h3>主流程</h3>
+  <div class="flow">
+    <div class="step"><div class="n">1</div><div class="t">进入问诊</div><div class="d">从 sick/soft_hint 入口,或诊所主动复查</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">2</div><div class="t">多轮对话</div><div class="d">医生先给初判,再追问关键信息</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">3</div><div class="t">用户结束</div><div class="d">用户主动点「结束问诊」</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="n">4</div><div class="t">总结入档</div><div class="d">本次结论 + 养护要点 → 记入日记</div></div>
+  </div>
+
+  <h3>预设分支(像智能客服的决策路径)</h3>
+  <p>当用户在诊所里拍了一张新照片,AI 先判断<strong>这是不是已建档的花</strong>,分三支:</p>
+  <div class="tree"><b>诊所内拍照</b>
+ ├─ 识别为<b>已入库的某株</b>           → 直接复诊,带出它的历史
+ ├─ 识别为<b>全新植物</b>             → 先诊断 → 诊断结束顺势帮用户<b>建档</b>(命名+生形象)
+ └─ <b>与某株同品种、疑似新个体</b>     → 询问用户确认:
+        ├─ "是同一盆"   → 并入该档案复诊
+        └─ "是新的一盆" → 走新植物分支(先诊断再建档)
+</div>
+  <p>这条"同品种需确认"的分支很重要——两盆都是多肉时,AI 无法仅凭外观区分,必须让用户拍板,避免把 B 的诊断错记到 A 头上。</p>
+
+  <h4>花大夫 System Prompt</h4>
+  <div class="prompt"><span class="pc"># 角色</span>
+你是「花大夫」,一位温暖、专业、略带幽默的植物医师。
+说话有活人感:先共情,再给可执行的建议,不堆术语。
+
+<span class="pc"># 已知上下文(后端注入)</span>
+植物: <span class="pv">{species}</span>, 昵称 <span class="pv">{name}</span>, 养护 <span class="pv">{days}</span> 天
+本次观测: <span class="pv">{observations}</span>, 趋势 <span class="pv">{trend}</span>
+养护知识: <span class="pv">{care_kb 片段}</span>   <span class="pc"># 来自第04节知识库</span>
+历史诊断: <span class="pv">{past_diagnoses}</span>
+
+<span class="pc"># 对话规则</span>
+1. 开场先给一句初步判断 + 一句安抚。
+2. 最多追问 1-2 个关键问题(如"最近放在哪/上次浇水大概多久前")。
+3. 给 2-3 条具体、好执行的养护动作。
+4. 不确定时坦诚说"再观察几天",不要编。
+5. 全程口语、简短、有温度,可适度俏皮。</div>
+
+  <h4>结束问诊 → 总结(提示词)</h4>
+  <div class="prompt"><span class="pc"># 用户点「结束问诊」后调用</span>
+根据本次对话,生成一条诊断日记摘要,输出 JSON:
+{
+  <span class="pt">"symptom"</span>: <span class="pv">"一句话症状"</span>,
+  <span class="pt">"conclusion"</span>: <span class="pv">"一句话结论"</span>,
+  <span class="pt">"plan"</span>: <span class="pv">"接下来要做的 2-3 件事(短)"</span>,
+  <span class="pt">"followup_days"</span>: <span class="pv">"建议几天后复查"</span>
+}</div>
+  <p class="prompt-cap">这条摘要写入该植物的日记流(kind=diagnosis),并可据 followup_days 安排诊所的"复查"提醒。</p>
+
+  <h2 id="care"><span class="num">04</span>养护指南知识库</h2>
+  <p class="lead">养护建议<strong>不能让 LLM 凭空发挥</strong>,要挂一个专业知识库做 RAG(检索增强),保证准确。原型里档案页那段"用植物第一人称写的养护指南"就是这个知识库的<strong>转写呈现</strong>。</p>
+
+  <h3>知识库结构(按品种)</h3>
+  <table>
+    <tr><th>字段</th><th>示例(仙人掌)</th></tr>
+    <tr><td><code>light</code> 光照</td><td>喜强光,每天 4h+ 直射;缺光会徒长</td></tr>
+    <tr><td><code>water</code> 浇水</td><td>土干透再浇,宁旱勿涝;冬季近乎断水</td></tr>
+    <tr><td><code>temp</code> 温度</td><td>适宜 15–30℃,5℃ 以下需保暖</td></tr>
+    <tr><td><code>soil</code> 土壤</td><td>疏松透气、颗粒为主</td></tr>
+    <tr><td><code>common_issues</code> 常见病</td><td>烂根(过水)、晒伤、介壳虫</td></tr>
+    <tr><td><code>signals</code> 求救信号</td><td>发软发皱=缺水;发黑=烂根</td></tr>
+  </table>
+  <p>来源:整理权威园艺资料入库(可人工校对)。诊断和养护建议都<strong>从这里检索</strong>对应品种条目,作为上下文喂给 LLM。</p>
+
+  <h4>第一人称转写(提示词)</h4>
+  <div class="prompt"><span class="pc"># 把知识库条目转成植物自己的口吻,带它的性格</span>
+把下面这株 <span class="pv">{species}</span> 的养护知识,改写成<b>它本人</b>对主人说的话。
+性格: <span class="pv">{personality}</span>   <span class="pc"># 如:傲娇冷漠、嘴硬心软</span>
+知识: <span class="pv">{care_kb}</span>
+
+要求:第一人称、口语、短;把"喜强光/土干再浇"等要点
+自然融进语气里。输出 2-3 句。
+
+<span class="pc"># 示例输出(小刺·仙人掌)</span>
+"我才不挑呢…就是别老给我浇水,土干透了我自己会喊渴。
+再就是,把我放窗台晒晒太阳,我…我会长得好看点给你看。"</div>
+  <p class="prompt-cap">默认收起,点击展开;同一份知识因性格不同而呈现不同口吻,这是"活人感"的来源。</p>
+
+  <h2 id="weather"><span class="num">05</span>天气与定位接入</h2>
+  <p class="lead">天气是 App 氛围感的来源:首页顶部的沉浸天气、小组件的晴/多云/小雨场景、文案里"听说今天有雨"这种共情,都依赖真实天气。</p>
+  <table>
+    <tr><th>能力</th><th>方案</th><th>用途</th></tr>
+    <tr><td>定位</td><td>iOS CoreLocation(粗定位即可)→ 反查城市</td><td>首页顶部城市、天气查询坐标</td></tr>
+    <tr><td>天气</td><td>天气 API(和风/OpenWeather 等),取实时 + 当日</td><td>晴/多云/雨 → 驱动场景与文案</td></tr>
+  </table>
+  <div class="box">
+    <div class="label">天气 → 体验联动</div>
+    <ul style="margin:0">
+      <li><strong>视觉</strong>:晴=暖阳光束;多云=漂移云层;雨=雨丝(原型已实现,接真实天气即可)。</li>
+      <li><strong>文案</strong>:天气作为上下文注入日记/对话提示词——"今天下雨,提醒减少浇水""连续晴天,注意补水"。</li>
+      <li><strong>养护</strong>:结合品种知识 + 天气给季节性提示(如寒潮提醒怕冷的团子保暖)。</li>
+    </ul>
+  </div>
+
+  <h2 id="diary"><span class="num">06</span>日记生成逻辑</h2>
+  <p class="lead">日记是 App 的核心资产。两种来源,都进同一条日记流:</p>
+  <div class="two-col">
+    <div class="box">
+      <div class="label">记录型(route=record)</div>
+      <p style="margin:0">状态好时,配<strong>情绪价值文案</strong>——以植物口吻写一句温暖的话,记录这次"合影"。轻松、治愈、有性格。</p>
+    </div>
+    <div class="box warn">
+      <div class="label">诊断型(kind=diagnosis)</div>
+      <p style="margin:0">问诊结束后,把<strong>结论 + 养护要点</strong>整理成一篇,记录"这次它生了什么病、怎么治的"。</p>
+    </div>
+  </div>
+
+  <h4>记录型情绪文案(提示词)</h4>
+  <div class="prompt"><span class="pc"># 状态好时,给这张照片配一句植物的心声</span>
+为 <span class="pv">{name}</span>(<span class="pv">{species}</span>, 性格 <span class="pv">{personality}</span>)的今日照片
+写一句日记文案。上下文:天气 <span class="pv">{weather}</span>, 养护第 <span class="pv">{days}</span> 天,
+观测 <span class="pv">{observations}</span>。
+
+要求:第一人称、贴合性格、有情绪价值、1-2 句、不说教。</div>
+
+  <h2 id="data"><span class="num">07</span>数据结构</h2>
+  <p>给后端/Claude Code 的参考模型(精简版,与原型字段对齐):</p>
+  <div class="prompt"><span class="pt">Plant</span> {
+  id, name, species, shape,
+  photo_url,          <span class="pc"># 最新照片</span>
+  cartoon_url,        <span class="pc"># 生成的卡通透明PNG(CDN)</span>
+  personality: [tags], style, voice,
+  born_date, care_kb_ref,
+  health: <span class="pv">"good|watch|sick"</span>,
+  diary: [Entry]
+}
+
+<span class="pt">Entry</span> {
+  id, plant_id, date,
+  kind: <span class="pv">"record | diagnosis"</span>,
+  photo_url, weather,
+  <span class="pc"># record:</span> quote
+  <span class="pc"># diagnosis:</span> symptom, conclusion, plan, followup_days
+}</div>
+
+  <h2 id="deps"><span class="num">08</span>外部依赖与 API 清单</h2>
+  <table>
+    <tr><th>能力</th><th>类型</th><th>调用时机</th></tr>
+    <tr><td>视觉理解 / 健康识别</td><td>多模态 LLM(视觉)</td><td>建档、每次拍照</td></tr>
+    <tr><td>对话(花大夫 / 植物心声)</td><td>LLM</td><td>问诊、生成文案</td></tr>
+    <tr><td>卡通形象生成</td><td>图生图 API</td><td>建档一次性</td></tr>
+    <tr><td>去背景抠图</td><td>图像处理 API</td><td>生图后</td></tr>
+    <tr><td>天气</td><td>天气 API</td><td>每日 / 进首页</td></tr>
+    <tr><td>定位</td><td>iOS 系统</td><td>首次 / 城市变化</td></tr>
+    <tr><td>知识库检索</td><td>向量库 / RAG</td><td>诊断、养护建议</td></tr>
+    <tr><td>图片存储</td><td>对象存储 + CDN</td><td>所有成品图</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="label">给 Claude Code 的开工建议</div>
+    <ol style="margin:0">
+      <li>先搭<strong>服务端编排层</strong>:统一封装"拍照 → 识别 → 分流 → 生文案/生图"这条主链路。</li>
+      <li>知识库先<strong>覆盖原型里这几种</strong>(仙人掌/多肉/绿萝/龟背竹/向日葵),再扩。</li>
+      <li>生图<strong>跑通一种品种打样</strong>,确认画风一致性达标,再批量。</li>
+      <li>客户端按本文档的<strong>分流决策树</strong>接服务端返回的 <code>route</code> 字段。</li>
+    </ol>
+  </div>
+
+  <div class="foot">花花日记本 &middot; 产品逻辑与 AI 方案 v1.0 草案 &middot; 配套高保真原型使用 &middot; 提示词为模板,接入时按所选模型微调</div>
+</div>
+
+</body>
+</html>
