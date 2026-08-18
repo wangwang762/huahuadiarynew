@@ -1,7 +1,87 @@
 /* ============================================================
    花花日记本 MVP · standard email OTP
-   Two steps on one journal flyleaf: address → six-digit code.
+   Two steps revealed behind a one-time garden gate entrance.
    ============================================================ */
+function GardenGateScene({ settled = false }) {
+  return (
+    <div className={`garden-gate-scene${settled ? " is-settled" : ""}`} aria-hidden="true">
+      <div className="garden-sunwash"></div>
+      <svg className="garden-landscape" viewBox="0 0 390 276" preserveAspectRatio="xMidYMax meet">
+        <defs>
+          <linearGradient id="gardenHillBack" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#DDE5D5" />
+            <stop offset="1" stopColor="#CAD7C4" />
+          </linearGradient>
+          <linearGradient id="gardenHillFront" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#B7C9AE" />
+            <stop offset="1" stopColor="#91A68B" />
+          </linearGradient>
+          <linearGradient id="petalClay" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#D6A17F" />
+            <stop offset="1" stopColor="#B97C68" />
+          </linearGradient>
+        </defs>
+
+        <circle cx="201" cy="72" r="38" fill="#F1D8A8" opacity=".42" />
+        <path d="M0 177C63 139 112 157 160 174C218 194 275 127 390 159V276H0Z" fill="url(#gardenHillBack)" />
+        <path d="M0 211C75 176 126 207 190 214C259 221 310 174 390 191V276H0Z" fill="url(#gardenHillFront)" />
+
+        <g className="garden-stem-sway garden-stem-sway-left">
+          <path d="M57 269C61 218 56 171 36 119" fill="none" stroke="#55745C" strokeWidth="4" strokeLinecap="round" />
+          <path d="M57 221C39 202 25 200 12 206C27 221 41 228 57 221Z" fill="#718B70" />
+          <path d="M48 177C66 159 82 157 96 165C82 180 66 188 48 177Z" fill="#829879" />
+          <g transform="translate(36 115)">
+            <ellipse cx="0" cy="-10" rx="10" ry="18" fill="url(#petalClay)" />
+            <ellipse cx="13" cy="0" rx="10" ry="18" transform="rotate(70 13 0)" fill="#C58A73" />
+            <ellipse cx="-13" cy="0" rx="10" ry="18" transform="rotate(-70 -13 0)" fill="#D2A080" />
+            <ellipse cx="7" cy="13" rx="10" ry="17" transform="rotate(145 7 13)" fill="#B97C68" />
+            <ellipse cx="-8" cy="13" rx="10" ry="17" transform="rotate(-145 -8 13)" fill="#C98E75" />
+            <circle cx="0" cy="2" r="7" fill="#8D634A" />
+          </g>
+        </g>
+
+        <g className="garden-stem-sway garden-stem-sway-mid">
+          <path d="M297 276C295 220 307 164 334 107" fill="none" stroke="#496B52" strokeWidth="4" strokeLinecap="round" />
+          <path d="M302 219C322 199 338 198 352 207C336 222 320 228 302 219Z" fill="#667F64" />
+          <path d="M315 170C294 154 278 155 265 165C282 177 299 182 315 170Z" fill="#7C9273" />
+          <g transform="translate(336 102)">
+            <ellipse cx="0" cy="-11" rx="11" ry="19" fill="#E1C28F" />
+            <ellipse cx="14" cy="0" rx="11" ry="19" transform="rotate(70 14 0)" fill="#D5B27B" />
+            <ellipse cx="-14" cy="0" rx="11" ry="19" transform="rotate(-70 -14 0)" fill="#E5CC9D" />
+            <ellipse cx="8" cy="14" rx="11" ry="18" transform="rotate(145 8 14)" fill="#CDA970" />
+            <ellipse cx="-8" cy="14" rx="11" ry="18" transform="rotate(-145 -8 14)" fill="#DBC08C" />
+            <circle cx="0" cy="2" r="7" fill="#8A714B" />
+          </g>
+        </g>
+
+        <g className="garden-stem-sway garden-stem-sway-right">
+          <path d="M361 276C357 236 361 205 376 172" fill="none" stroke="#57775B" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M363 228C346 215 334 216 324 224C338 233 350 237 363 228Z" fill="#6D876B" />
+          <path d="M371 196C382 183 390 182 397 185V207C389 209 380 207 371 196Z" fill="#819578" />
+          <circle cx="377" cy="166" r="10" fill="#B87E75" />
+          <circle cx="367" cy="168" r="8" fill="#CC9486" />
+          <circle cx="384" cy="174" r="8" fill="#D5A28F" />
+          <circle cx="376" cy="174" r="4" fill="#7E654C" />
+        </g>
+
+        <g opacity=".9">
+          <path d="M93 276C91 246 97 221 111 197" fill="none" stroke="#5C785E" strokeWidth="3" />
+          <ellipse cx="114" cy="194" rx="9" ry="15" fill="#C99A87" />
+          <path d="M144 276C145 247 139 227 129 211" fill="none" stroke="#607B60" strokeWidth="3" />
+          <circle cx="127" cy="207" r="9" fill="#D9BC91" />
+          <path d="M236 276C238 247 231 224 218 204" fill="none" stroke="#557159" strokeWidth="3" />
+          <ellipse cx="216" cy="199" rx="9" ry="14" fill="#B98376" />
+        </g>
+      </svg>
+
+      <span className="garden-petal garden-petal-one"></span>
+      <span className="garden-petal garden-petal-two"></span>
+      <div className="garden-door garden-door-left"><span></span></div>
+      <div className="garden-door garden-door-right"><span></span></div>
+    </div>
+  );
+}
+
 function EmailEntry({ onEnter }) {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -77,52 +157,19 @@ function EmailEntry({ onEnter }) {
   }
 
   return (
-    <div className="soft-fade" style={{ position: "absolute", inset: 0, overflow: "hidden",
-      background: "radial-gradient(120% 62% at 50% -4%, #FCF6EA 0%, #F2EBDD 48%, #E7E1D0 100%)" }}>
-      <div style={{ position: "absolute", width: 240, height: 240, borderRadius: "50%", right: -116, top: -70,
-        border: "1px dashed rgba(44,97,71,.18)" }}></div>
-      <div style={{ position: "absolute", width: 150, height: 150, borderRadius: "50%", left: -92, bottom: 62,
-        border: "1px dashed rgba(44,97,71,.14)" }}></div>
-
-      <div style={{ position: "absolute", top: 54, left: 26, right: 26, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span className="kicker">HUĀHUĀ · MVP</span>
-        <span style={{ fontFamily: "var(--f-script)", fontSize: 18, color: "var(--green)" }}>{step === "email" ? "初次见面" : "信已寄出"}</span>
-      </div>
-
-      <main style={{ position: "absolute", inset: "102px 24px 30px", display: "flex", flexDirection: "column" }}>
-        <div style={{ position: "relative", height: 148, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", width: 124, height: 124, borderRadius: "50%", background: "rgba(219,229,210,.72)",
-            boxShadow: "inset 0 0 0 1px rgba(44,97,71,.08)" }}></div>
-          <svg width="126" height="126" viewBox="0 0 126 126" style={{ position: "relative", overflow: "visible" }} aria-hidden="true">
-            <path d="M63 91C60 65 66 43 87 24" fill="none" stroke="#315F47" strokeWidth="3" strokeLinecap="round"/>
-            <path d="M68 69C83 69 96 60 99 45 84 43 72 51 68 69Z" fill="#6F8D68"/>
-            <path d="M63 77C50 75 39 66 37 53 50 52 61 60 63 77Z" fill="#88A17A"/>
-            <path d="M57 100h28l-4 16H61Z" fill="#A9794E"/>
-            <path d="M55 97h32" stroke="#755334" strokeWidth="4" strokeLinecap="round"/>
-            <path d="M65 101c4 0 6 5 5 12" fill="none" stroke="#C99B68" strokeWidth="4" strokeLinecap="round" opacity=".7"/>
-            <g transform={step === "email" ? "translate(0 0)" : "translate(-2 2) rotate(-5 98 29)"}>
-              <path d="M90 27c8-7 16-5 19 0-5 6-13 8-19 0Z" fill="#D2A267"/>
-              {step === "code" && <><rect x="87" y="17" width="27" height="19" rx="3" fill="#FBF6EB" stroke="#315F47" strokeWidth="1.5"/><path d="m89 20 11.5 8L112 20" fill="none" stroke="#6F8D68" strokeWidth="1.4"/></>}
-            </g>
-          </svg>
-          <span style={{ position: "absolute", right: 38, top: 12, fontFamily: "var(--f-script)", fontSize: 20,
-            color: "var(--ink-faint)", transform: "rotate(7deg)" }}>{step === "email" ? "留个地址吧" : "去邮箱看看"}</span>
-        </div>
-
+    <div className="garden-login-page soft-fade">
+      <GardenGateScene settled={step === "code"} />
+      <main className="garden-login-form">
         {step === "email" ? (
           <div className="soft-fade">
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontFamily: "var(--f-journal)", fontSize: 29, lineHeight: 1.38, fontWeight: 700, letterSpacing: "-.5px" }}>
-                给你的花园，<br/><span className="hl">留一扇回来的门</span>
-              </div>
-              <p className="serif" style={{ margin: "13px 0 0", color: "var(--ink-soft)", fontSize: 14.5, lineHeight: 1.75 }}>
-                填一个常用邮箱，我们会寄去一封<br/>只装着六个数字的短短信笺。
-              </p>
+            <div className="garden-login-heading">
+              <div className="garden-login-title">登录花花日记本</div>
+              <p className="serif garden-login-helper">用邮箱保存并找回你的花园</p>
             </div>
 
-            <form onSubmit={sendCode} noValidate style={{ marginTop: 26 }}>
+            <form onSubmit={sendCode} noValidate className="garden-login-fields">
               <label htmlFor="mvp-email" style={{ display: "block", fontSize: 11.5, letterSpacing: "1.2px", fontWeight: 600,
-                color: "var(--ink-faint)", margin: "0 0 8px 4px" }}>你的邮箱</label>
+                color: "var(--ink-faint)", margin: "0 0 8px 4px" }}>邮箱</label>
               <div style={{ position: "relative" }}>
                 <Icon name="mail" size={19} color={error ? "var(--coral)" : "var(--green)"}
                   style={{ position: "absolute", left: 16, top: 17, pointerEvents: "none" }} />
@@ -137,17 +184,15 @@ function EmailEntry({ onEnter }) {
               <InlineEmailError error={error} />
               <button type="submit" disabled={busy} className="btn-green" style={{ width: "100%", height: 54, marginTop: 8,
                 fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? .7 : 1 }}>
-                {busy ? "正在寄出…" : "寄一封回花园的信"}
+                {busy ? "正在发送…" : "获取验证码"}
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
               </button>
             </form>
           </div>
         ) : (
-          <div className="soft-fade" style={{ marginTop: 12 }}>
-            <div style={{ fontFamily: "var(--f-journal)", fontSize: 28, lineHeight: 1.38, fontWeight: 700, letterSpacing: "-.5px" }}>
-              信已经寄到了，<br/><span className="hl">抄下里面的六个数字</span>
-            </div>
-            <div style={{ marginTop: 11, display: "flex", alignItems: "center", gap: 7, color: "var(--ink-soft)", fontSize: 13 }}>
+          <div className="soft-fade">
+            <div className="garden-login-title">输入邮箱验证码</div>
+            <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 7, color: "var(--ink-soft)", fontSize: 13 }}>
               <Icon name="mail" size={15} color="var(--green)" />
               <span style={{ maxWidth: 245, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</span>
               <button onClick={editEmail} style={{ color: "var(--green)", fontWeight: 600, flexShrink: 0 }}>换一个</button>
@@ -172,7 +217,7 @@ function EmailEntry({ onEnter }) {
 
               <button type="submit" disabled={busy || code.length !== 6} className="btn-green" style={{ width: "100%", height: 52, marginTop: 14,
                 fontSize: 16, opacity: busy || code.length !== 6 ? .48 : 1 }}>
-                {busy ? "正在确认…" : "打开我的花园"}
+                {busy ? "正在登录…" : "进入我的花园"}
               </button>
             </form>
 
@@ -182,10 +227,7 @@ function EmailEntry({ onEnter }) {
           </div>
         )}
 
-        <div style={{ marginTop: "auto", borderTop: "1px solid var(--hairline)", paddingTop: 14, display: "flex", gap: 9, alignItems: "flex-start" }}>
-          <Icon name="leaf" size={15} color="var(--green)" style={{ flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontSize: 11.5, lineHeight: 1.55, color: "var(--ink-faint)" }}>验证码只用于登录花花日记本，我们不会发送营销邮件。</span>
-        </div>
+        <div className="garden-login-privacy">验证码仅用于登录，不会发送营销邮件</div>
       </main>
     </div>
   );
@@ -193,7 +235,7 @@ function EmailEntry({ onEnter }) {
 
 function InlineEmailError({ error }) {
   return <div id="mvp-email-error" role="alert" style={{ minHeight: 22, padding: "6px 4px 0", fontSize: 12.5,
-    color: error ? "var(--coral)" : "transparent" }}>{error || "占位"}</div>;
+    color: error ? "var(--coral)" : "transparent" }}>{error || "\u00A0"}</div>;
 }
 
 window.EmailEntry = EmailEntry;
