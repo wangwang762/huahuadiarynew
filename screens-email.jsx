@@ -1,63 +1,44 @@
 /* ============================================================
    花花日记本 MVP · standard email OTP
-   Two steps revealed behind a one-time garden gate entrance.
+   Two steps revealed behind a one-time field-journal cover.
    ============================================================ */
-function GardenGateScene({ settled = false }) {
+function CollageJournalScene({ settled = false }) {
   return (
-    <div className={`garden-gate-world${settled ? " is-settled" : ""}`} aria-hidden="true">
-      <div className="garden-atmosphere">
-        <span className="garden-morning-orb"></span>
-        <span className="garden-wall-shadow garden-wall-shadow-one"></span>
-        <span className="garden-wall-shadow garden-wall-shadow-two"></span>
+    <div className={`collage-login-stage${settled ? " is-settled" : ""}`} aria-hidden="true">
+      <div className="collage-corkboard"></div>
+      <div className="collage-field-sheet-back"></div>
+      <div className="collage-field-sheet">
+        <div className="collage-brass-clip collage-sheet-clip"><span></span></div>
+        <figure className="collage-polaroid collage-polaroid-left">
+          <div><img src="assets/plants/final-v1/guibeizhu.png" alt="" /></div>
+          <figcaption>MONSTERA · 03</figcaption>
+        </figure>
+        <figure className="collage-polaroid collage-polaroid-right">
+          <div><img src="assets/plants/final-v1/hudielan.png" alt="" /></div>
+          <figcaption>ORCHID · 11</figcaption>
+        </figure>
+        <span className="collage-stamp">HUĀHUĀ<br />FIELD NOTES</span>
+        <span className="collage-tape collage-tape-blue"></span>
+        <span className="collage-tape collage-tape-pink"></span>
+        <span className="collage-pin collage-pin-coral"></span>
+        <span className="collage-pin collage-pin-green"></span>
+        <span className="collage-doodle collage-doodle-star">✦</span>
+        <span className="collage-doodle collage-doodle-leaf">⌇</span>
       </div>
 
-      <div className="garden-light-rays">
-        <span className="garden-light-ray garden-light-ray-one"></span>
-        <span className="garden-light-ray garden-light-ray-two"></span>
-      </div>
-
-      <div className="garden-midground">
-        <div className="garden-plant garden-plant-left">
-          <img src="assets/plants/final-v1/guibeizhu.png" alt="" />
+      <div className="collage-cover collage-cover-left">
+        <span className="collage-cover-edge"></span>
+        <div className="collage-cover-copy">
+          <span>PLANT OBSERVATION</span>
+          <strong>花花<br />日记本</strong>
+          <small>FIELD NOTES · 2026</small>
         </div>
-        <div className="garden-plant garden-plant-center">
-          <img src="assets/plants/final-v1/hudielan.png" alt="" />
-        </div>
-        <div className="garden-plant garden-plant-right">
-          <img src="assets/plants/final-v1/xiuqiuhua.png" alt="" />
-        </div>
-        <div className="garden-stone-shelf"></div>
       </div>
-
-      <svg className="garden-foreground" viewBox="0 0 390 844" preserveAspectRatio="none">
-        <g className="garden-foreground-left">
-          <path d="M4 844C9 728 23 647 52 588" fill="none" stroke="#294C39" strokeWidth="5" strokeLinecap="round" />
-          <path d="M17 726C28 676 54 648 83 651C72 688 49 714 17 726Z" fill="#42674E" />
-          <path d="M30 665C31 619 49 588 75 581C75 619 60 650 30 665Z" fill="#57775B" />
-          <path d="M8 783C21 746 43 729 66 737C55 766 35 783 8 783Z" fill="#315A42" />
-        </g>
-        <g className="garden-foreground-right">
-          <path d="M386 844C382 727 367 648 337 590" fill="none" stroke="#2C503B" strokeWidth="5" strokeLinecap="round" />
-          <path d="M373 724C362 677 337 648 308 652C319 689 341 714 373 724Z" fill="#4B6C52" />
-          <path d="M359 661C359 619 341 588 315 581C316 619 331 648 359 661Z" fill="#687F60" />
-          <path d="M382 782C369 747 348 730 325 738C336 766 355 783 382 782Z" fill="#385F46" />
-        </g>
-      </svg>
-
-      <div className="garden-dust">
-        <span></span><span></span><span></span>
-      </div>
-
-      <div className="garden-gate-light"></div>
-      <div className="garden-door-v2 garden-door-left-v2">
-        <div className="garden-door-panel garden-door-panel-top"></div>
-        <div className="garden-door-panel garden-door-panel-bottom"></div>
-        <span className="garden-door-knob"></span>
-      </div>
-      <div className="garden-door-v2 garden-door-right-v2">
-        <div className="garden-door-panel garden-door-panel-top"></div>
-        <div className="garden-door-panel garden-door-panel-bottom"></div>
-        <span className="garden-door-knob"></span>
+      <div className="collage-cover collage-cover-right">
+        <span className="collage-cover-edge"></span>
+        <div className="collage-brass-clip collage-cover-clip"><span></span></div>
+        <span className="collage-cover-label">NO. 0826</span>
+        <span className="collage-cover-flower">✿</span>
       </div>
     </div>
   );
@@ -140,41 +121,33 @@ function EmailEntry({ onEnter }) {
   }
 
   return (
-    <div className="garden-login-page soft-fade">
-      <GardenGateScene settled={step === "code"} />
-      <svg className="garden-leaf-shadow" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true">
-        <g>
-          <path d="M286 382C326 402 352 437 362 485" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-          <ellipse cx="318" cy="411" rx="13" ry="31" transform="rotate(-47 318 411)" />
-          <ellipse cx="347" cy="448" rx="12" ry="29" transform="rotate(-34 347 448)" />
-          <ellipse cx="296" cy="393" rx="11" ry="27" transform="rotate(-64 296 393)" />
-        </g>
-      </svg>
-      <main className="garden-journal-sheet garden-paper-reveal">
-        <div className="garden-paper-meta">
-          <div className="garden-paper-kicker">花园通行笺 · HUĀHUĀ</div>
-          <div className="garden-paper-date">{paperDate}</div>
+    <div className="collage-login-page soft-fade">
+      <CollageJournalScene settled={step === "code"} />
+      <main className="collage-login-form collage-form-reveal">
+        <div className="collage-form-meta">
+          <span>HUĀHUĀ FIELD NOTES</span>
+          <span>{paperDate}</span>
         </div>
         {step === "email" ? (
           <div className="soft-fade">
-            <div className="garden-login-heading">
-              <div className="garden-login-title">登录花花日记本</div>
-              <p className="serif garden-login-helper">用邮箱保存并找回你的花园</p>
+            <div className="collage-login-heading">
+              <div className="collage-login-title">登录花花日记本</div>
+              <p className="serif collage-login-helper">用邮箱保存并找回你的花园</p>
             </div>
 
-            <form onSubmit={sendCode} noValidate className="garden-login-fields">
-              <label htmlFor="mvp-email" className="garden-field-label">邮箱地址</label>
-              <div className={`garden-line-field${error ? " has-error" : valid ? " is-valid" : ""}`}>
+            <form onSubmit={sendCode} noValidate className="collage-login-fields">
+              <label htmlFor="mvp-email" className="collage-field-label">邮箱地址</label>
+              <div className={`collage-email-note${error ? " has-error" : valid ? " is-valid" : ""}`}>
                 <Icon name="mail" size={19} color={error ? "var(--coral)" : "var(--green)"}
                   style={{ pointerEvents: "none" }} />
                 <input id="mvp-email" type="email" inputMode="email" autoComplete="email" value={email}
                   onChange={e => { setEmail(e.target.value); if (error) setError(""); }}
                   placeholder="name@example.com" aria-invalid={!!error} aria-describedby="mvp-email-error"
-                  className="garden-line-input" />
+                  className="collage-email-input" />
                 {valid && <Icon name="check" size={17} color="var(--green)" />}
               </div>
               <InlineEmailError error={error} />
-              <button type="submit" disabled={busy} className="garden-ink-button" style={{ opacity: busy ? .7 : 1 }}>
+              <button type="submit" disabled={busy} className="collage-paper-button" style={{ opacity: busy ? .7 : 1 }}>
                 {busy ? "正在发送…" : "获取验证码"}
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
               </button>
@@ -182,7 +155,7 @@ function EmailEntry({ onEnter }) {
           </div>
         ) : (
           <div className="soft-fade">
-            <div className="garden-login-title">输入邮箱验证码</div>
+            <div className="collage-login-title">输入邮箱验证码</div>
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 7, color: "var(--ink-soft)", fontSize: 13 }}>
               <Icon name="mail" size={15} color="var(--green)" />
               <span style={{ maxWidth: 245, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</span>
@@ -190,9 +163,9 @@ function EmailEntry({ onEnter }) {
             </div>
 
             <form onSubmit={verifyCode} style={{ marginTop: 24 }}>
-              <div className="garden-otp-lines" onClick={() => codeInput.current && codeInput.current.focus()}>
+              <div className="collage-otp-row" onClick={() => codeInput.current && codeInput.current.focus()}>
                 {[0,1,2,3,4,5].map(index => (
-                  <div key={index} className={`garden-otp-line${error ? " has-error" : code.length === index ? " is-active" : ""}`}>
+                  <div key={index} className={`collage-otp-stamp${error ? " has-error" : code.length === index ? " is-active" : ""}`}>
                     {code[index] || ""}
                   </div>
                 ))}
@@ -202,7 +175,7 @@ function EmailEntry({ onEnter }) {
               </div>
               <InlineEmailError error={error} />
 
-              <button type="submit" disabled={busy || code.length !== 6} className="garden-ink-button" style={{ opacity: busy || code.length !== 6 ? .48 : 1 }}>
+              <button type="submit" disabled={busy || code.length !== 6} className="collage-paper-button" style={{ opacity: busy || code.length !== 6 ? .48 : 1 }}>
                 {busy ? "正在登录…" : "进入我的花园"}
               </button>
             </form>
@@ -213,7 +186,7 @@ function EmailEntry({ onEnter }) {
           </div>
         )}
 
-        <div className="garden-login-privacy">验证码仅用于登录，不会发送营销邮件</div>
+        <div className="collage-login-privacy">验证码仅用于登录，不会发送营销邮件</div>
       </main>
     </div>
   );
