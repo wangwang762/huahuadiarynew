@@ -493,7 +493,7 @@ input, textarea { font-family: inherit; }
   opacity: 0;
   animation: collageStickerDrop .4s ease forwards;
 }
-.collage-doodle-star { left: 18px; top: 224px; color: var(--collage-yellow); font-size: 25px; transform: rotate(-12deg); animation-delay: 1.26s; }
+.collage-doodle-star { left: -5px; bottom: 84px; color: var(--collage-yellow); font-size: 25px; transform: rotate(-12deg); animation-delay: 1.26s; }
 .collage-doodle-leaf { right: 23px; bottom: 45px; color: var(--collage-green); font-size: 31px; transform: rotate(17deg); animation-delay: 1.3s; }
 
 .collage-cover {
@@ -587,7 +587,7 @@ input, textarea { font-family: inherit; }
 }
 .collage-cover-clip {
   top: 69px;
-  left: -37px;
+  left: 9px;
   transform: rotate(1deg);
   animation: collageClipSettle .28s ease .06s both;
 }
