@@ -14,6 +14,13 @@ for (const marker of [
   "登录花花日记本",
   "用邮箱保存并找回你的花园",
   "输入邮箱验证码",
+  "garden-light-rays",
+  "garden-leaf-shadow",
+  "garden-dust",
+  "garden-paper-date",
+  "garden-line-field",
+  "garden-ink-button",
+  "garden-otp-line",
 ]) {
   if (!screen.includes(marker)) throw new Error(`missing garden login marker: ${marker}`);
 }
@@ -25,9 +32,19 @@ for (const marker of [
   "garden-foreground",
   "garden-paper-reveal",
   "prefers-reduced-motion: reduce",
+  "gardenLightBreathe",
+  "gardenLeafShadowDrift",
+  "gardenDustRise",
+  ".garden-journal-sheet {",
 ]) {
   if (!styles.includes(marker)) throw new Error(`missing garden motion marker: ${marker}`);
 }
+
+for (const rejectedV2 of ["border-radius: 3px 17px 14px 5px", "box-shadow: 0 22px 42px"]) {
+  if (styles.includes(rejectedV2)) throw new Error(`rejected V2 card treatment remains: ${rejectedV2}`);
+}
+
+if (screen.includes("borderRadius: 10")) throw new Error("rounded OTP boxes remain");
 
 for (const rejectedV1 of ["garden-landscape", "gardenHillBack", "garden-stem-sway-left", "garden-door::before"]) {
   if (screen.includes(rejectedV1) || styles.includes(rejectedV1)) throw new Error(`rejected V1 marker remains: ${rejectedV1}`);

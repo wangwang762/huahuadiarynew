@@ -11,6 +11,11 @@ function GardenGateScene({ settled = false }) {
         <span className="garden-wall-shadow garden-wall-shadow-two"></span>
       </div>
 
+      <div className="garden-light-rays">
+        <span className="garden-light-ray garden-light-ray-one"></span>
+        <span className="garden-light-ray garden-light-ray-two"></span>
+      </div>
+
       <div className="garden-midground">
         <div className="garden-plant garden-plant-left">
           <img src="assets/plants/final-v1/guibeizhu.png" alt="" />
@@ -26,18 +31,22 @@ function GardenGateScene({ settled = false }) {
 
       <svg className="garden-foreground" viewBox="0 0 390 844" preserveAspectRatio="none">
         <g className="garden-foreground-left">
-          <path d="M-42 487C22 438 80 443 112 494C52 514 2 512-42 487Z" fill="#294F3C" />
-          <path d="M-26 571C21 513 85 510 124 552C70 584 19 592-26 571Z" fill="#375F48" />
-          <path d="M-17 657C12 595 69 575 116 605C78 650 34 669-17 657Z" fill="#54745B" />
-          <path d="M-6 844C1 697 32 577 90 472" fill="none" stroke="#244936" strokeWidth="10" strokeLinecap="round" />
+          <path d="M4 844C9 728 23 647 52 588" fill="none" stroke="#294C39" strokeWidth="5" strokeLinecap="round" />
+          <path d="M17 726C28 676 54 648 83 651C72 688 49 714 17 726Z" fill="#42674E" />
+          <path d="M30 665C31 619 49 588 75 581C75 619 60 650 30 665Z" fill="#57775B" />
+          <path d="M8 783C21 746 43 729 66 737C55 766 35 783 8 783Z" fill="#315A42" />
         </g>
         <g className="garden-foreground-right">
-          <path d="M432 463C378 426 324 437 294 482C346 502 392 497 432 463Z" fill="#315640" />
-          <path d="M425 555C384 505 328 505 292 544C339 572 384 577 425 555Z" fill="#45694F" />
-          <path d="M420 650C392 588 338 572 294 603C332 645 373 663 420 650Z" fill="#607B60" />
-          <path d="M398 844C394 690 364 567 309 460" fill="none" stroke="#2C503B" strokeWidth="10" strokeLinecap="round" />
+          <path d="M386 844C382 727 367 648 337 590" fill="none" stroke="#2C503B" strokeWidth="5" strokeLinecap="round" />
+          <path d="M373 724C362 677 337 648 308 652C319 689 341 714 373 724Z" fill="#4B6C52" />
+          <path d="M359 661C359 619 341 588 315 581C316 619 331 648 359 661Z" fill="#687F60" />
+          <path d="M382 782C369 747 348 730 325 738C336 766 355 783 382 782Z" fill="#385F46" />
         </g>
       </svg>
+
+      <div className="garden-dust">
+        <span></span><span></span><span></span>
+      </div>
 
       <div className="garden-gate-light"></div>
       <div className="garden-door-v2 garden-door-left-v2">
@@ -64,6 +73,8 @@ function EmailEntry({ onEnter }) {
   const [seconds, setSeconds] = useState(0);
   const codeInput = useRef(null);
   const valid = window.HHAccount.isValidEmail(email);
+  const paperDate = new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" })
+    .format(new Date()).replace("/", " / ");
 
   useEffect(() => {
     if (step !== "code" || seconds <= 0) return;
@@ -131,8 +142,19 @@ function EmailEntry({ onEnter }) {
   return (
     <div className="garden-login-page soft-fade">
       <GardenGateScene settled={step === "code"} />
+      <svg className="garden-leaf-shadow" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true">
+        <g>
+          <path d="M286 382C326 402 352 437 362 485" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+          <ellipse cx="318" cy="411" rx="13" ry="31" transform="rotate(-47 318 411)" />
+          <ellipse cx="347" cy="448" rx="12" ry="29" transform="rotate(-34 347 448)" />
+          <ellipse cx="296" cy="393" rx="11" ry="27" transform="rotate(-64 296 393)" />
+        </g>
+      </svg>
       <main className="garden-journal-sheet garden-paper-reveal">
-        <div className="garden-paper-kicker">花园通行笺 · HUĀHUĀ</div>
+        <div className="garden-paper-meta">
+          <div className="garden-paper-kicker">花园通行笺 · HUĀHUĀ</div>
+          <div className="garden-paper-date">{paperDate}</div>
+        </div>
         {step === "email" ? (
           <div className="soft-fade">
             <div className="garden-login-heading">
@@ -141,22 +163,18 @@ function EmailEntry({ onEnter }) {
             </div>
 
             <form onSubmit={sendCode} noValidate className="garden-login-fields">
-              <label htmlFor="mvp-email" style={{ display: "block", fontSize: 11.5, letterSpacing: "1.2px", fontWeight: 600,
-                color: "var(--ink-faint)", margin: "0 0 8px 4px" }}>邮箱</label>
-              <div style={{ position: "relative" }}>
+              <label htmlFor="mvp-email" className="garden-field-label">邮箱地址</label>
+              <div className={`garden-line-field${error ? " has-error" : valid ? " is-valid" : ""}`}>
                 <Icon name="mail" size={19} color={error ? "var(--coral)" : "var(--green)"}
-                  style={{ position: "absolute", left: 16, top: 17, pointerEvents: "none" }} />
+                  style={{ pointerEvents: "none" }} />
                 <input id="mvp-email" type="email" inputMode="email" autoComplete="email" value={email}
                   onChange={e => { setEmail(e.target.value); if (error) setError(""); }}
                   placeholder="name@example.com" aria-invalid={!!error} aria-describedby="mvp-email-error"
-                  style={{ width: "100%", height: 54, borderRadius: 13, border: `1.5px solid ${error ? "var(--coral-soft)" : valid ? "rgba(44,97,71,.48)" : "var(--hairline)"}`,
-                    background: "rgba(251,246,235,.9)", padding: "0 44px", outline: "none", color: "var(--ink)", fontSize: 15.5,
-                    boxShadow: valid ? "0 5px 16px rgba(44,97,71,.08)" : "var(--sh-1)", transition: "all .18s ease" }} />
-                {valid && <Icon name="check" size={17} color="var(--green)" style={{ position: "absolute", right: 16, top: 18 }} />}
+                  className="garden-line-input" />
+                {valid && <Icon name="check" size={17} color="var(--green)" />}
               </div>
               <InlineEmailError error={error} />
-              <button type="submit" disabled={busy} className="btn-green" style={{ width: "100%", height: 54, marginTop: 8,
-                fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: busy ? .7 : 1 }}>
+              <button type="submit" disabled={busy} className="garden-ink-button" style={{ opacity: busy ? .7 : 1 }}>
                 {busy ? "正在发送…" : "获取验证码"}
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
               </button>
@@ -172,13 +190,9 @@ function EmailEntry({ onEnter }) {
             </div>
 
             <form onSubmit={verifyCode} style={{ marginTop: 24 }}>
-              <div onClick={() => codeInput.current && codeInput.current.focus()} style={{ position: "relative", display: "grid",
-                gridTemplateColumns: "repeat(6, 1fr)", gap: 7 }}>
+              <div className="garden-otp-lines" onClick={() => codeInput.current && codeInput.current.focus()}>
                 {[0,1,2,3,4,5].map(index => (
-                  <div key={index} style={{ height: 52, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "rgba(251,246,235,.92)", border: `1.5px solid ${error ? "rgba(200,85,60,.38)" : code.length === index ? "var(--green)" : "var(--hairline)"}`,
-                    boxShadow: code.length === index ? "0 5px 14px rgba(44,97,71,.10)" : "var(--sh-1)",
-                    fontFamily: "var(--f-num)", fontSize: 23, fontWeight: 700, color: "var(--ink)" }}>
+                  <div key={index} className={`garden-otp-line${error ? " has-error" : code.length === index ? " is-active" : ""}`}>
                     {code[index] || ""}
                   </div>
                 ))}
@@ -188,8 +202,7 @@ function EmailEntry({ onEnter }) {
               </div>
               <InlineEmailError error={error} />
 
-              <button type="submit" disabled={busy || code.length !== 6} className="btn-green" style={{ width: "100%", height: 52, marginTop: 14,
-                fontSize: 16, opacity: busy || code.length !== 6 ? .48 : 1 }}>
+              <button type="submit" disabled={busy || code.length !== 6} className="garden-ink-button" style={{ opacity: busy || code.length !== 6 ? .48 : 1 }}>
                 {busy ? "正在登录…" : "进入我的花园"}
               </button>
             </form>
