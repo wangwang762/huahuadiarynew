@@ -5,8 +5,12 @@ const styles = fs.readFileSync("styles.css", "utf8");
 
 for (const marker of [
   "function GardenGateScene",
-  "garden-gate-scene",
-  "garden-login-form",
+  "garden-gate-world",
+  "garden-midground",
+  "garden-journal-sheet",
+  "assets/plants/final-v1/guibeizhu.png",
+  "assets/plants/final-v1/hudielan.png",
+  "assets/plants/final-v1/xiuqiuhua.png",
   "登录花花日记本",
   "用邮箱保存并找回你的花园",
   "输入邮箱验证码",
@@ -15,12 +19,18 @@ for (const marker of [
 }
 
 for (const marker of [
-  "garden-door-left",
-  "garden-door-right",
-  "garden-stem-sway",
+  "perspective:",
+  "rotateY",
+  "garden-gate-light",
+  "garden-foreground",
+  "garden-paper-reveal",
   "prefers-reduced-motion: reduce",
 ]) {
   if (!styles.includes(marker)) throw new Error(`missing garden motion marker: ${marker}`);
+}
+
+for (const rejectedV1 of ["garden-landscape", "gardenHillBack", "garden-stem-sway-left", "garden-door::before"]) {
+  if (screen.includes(rejectedV1) || styles.includes(rejectedV1)) throw new Error(`rejected V1 marker remains: ${rejectedV1}`);
 }
 
 for (const oldCopy of ["HUĀHUĀ · MVP", "初次见面", "给你的花园", "短短信笺", "留个地址吧"]) {

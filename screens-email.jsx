@@ -4,80 +4,52 @@
    ============================================================ */
 function GardenGateScene({ settled = false }) {
   return (
-    <div className={`garden-gate-scene${settled ? " is-settled" : ""}`} aria-hidden="true">
-      <div className="garden-sunwash"></div>
-      <svg className="garden-landscape" viewBox="0 0 390 276" preserveAspectRatio="xMidYMax meet">
-        <defs>
-          <linearGradient id="gardenHillBack" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#DDE5D5" />
-            <stop offset="1" stopColor="#CAD7C4" />
-          </linearGradient>
-          <linearGradient id="gardenHillFront" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#B7C9AE" />
-            <stop offset="1" stopColor="#91A68B" />
-          </linearGradient>
-          <linearGradient id="petalClay" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#D6A17F" />
-            <stop offset="1" stopColor="#B97C68" />
-          </linearGradient>
-        </defs>
+    <div className={`garden-gate-world${settled ? " is-settled" : ""}`} aria-hidden="true">
+      <div className="garden-atmosphere">
+        <span className="garden-morning-orb"></span>
+        <span className="garden-wall-shadow garden-wall-shadow-one"></span>
+        <span className="garden-wall-shadow garden-wall-shadow-two"></span>
+      </div>
 
-        <circle cx="201" cy="72" r="38" fill="#F1D8A8" opacity=".42" />
-        <path d="M0 177C63 139 112 157 160 174C218 194 275 127 390 159V276H0Z" fill="url(#gardenHillBack)" />
-        <path d="M0 211C75 176 126 207 190 214C259 221 310 174 390 191V276H0Z" fill="url(#gardenHillFront)" />
+      <div className="garden-midground">
+        <div className="garden-plant garden-plant-left">
+          <img src="assets/plants/final-v1/guibeizhu.png" alt="" />
+        </div>
+        <div className="garden-plant garden-plant-center">
+          <img src="assets/plants/final-v1/hudielan.png" alt="" />
+        </div>
+        <div className="garden-plant garden-plant-right">
+          <img src="assets/plants/final-v1/xiuqiuhua.png" alt="" />
+        </div>
+        <div className="garden-stone-shelf"></div>
+      </div>
 
-        <g className="garden-stem-sway garden-stem-sway-left">
-          <path d="M57 269C61 218 56 171 36 119" fill="none" stroke="#55745C" strokeWidth="4" strokeLinecap="round" />
-          <path d="M57 221C39 202 25 200 12 206C27 221 41 228 57 221Z" fill="#718B70" />
-          <path d="M48 177C66 159 82 157 96 165C82 180 66 188 48 177Z" fill="#829879" />
-          <g transform="translate(36 115)">
-            <ellipse cx="0" cy="-10" rx="10" ry="18" fill="url(#petalClay)" />
-            <ellipse cx="13" cy="0" rx="10" ry="18" transform="rotate(70 13 0)" fill="#C58A73" />
-            <ellipse cx="-13" cy="0" rx="10" ry="18" transform="rotate(-70 -13 0)" fill="#D2A080" />
-            <ellipse cx="7" cy="13" rx="10" ry="17" transform="rotate(145 7 13)" fill="#B97C68" />
-            <ellipse cx="-8" cy="13" rx="10" ry="17" transform="rotate(-145 -8 13)" fill="#C98E75" />
-            <circle cx="0" cy="2" r="7" fill="#8D634A" />
-          </g>
+      <svg className="garden-foreground" viewBox="0 0 390 844" preserveAspectRatio="none">
+        <g className="garden-foreground-left">
+          <path d="M-42 487C22 438 80 443 112 494C52 514 2 512-42 487Z" fill="#294F3C" />
+          <path d="M-26 571C21 513 85 510 124 552C70 584 19 592-26 571Z" fill="#375F48" />
+          <path d="M-17 657C12 595 69 575 116 605C78 650 34 669-17 657Z" fill="#54745B" />
+          <path d="M-6 844C1 697 32 577 90 472" fill="none" stroke="#244936" strokeWidth="10" strokeLinecap="round" />
         </g>
-
-        <g className="garden-stem-sway garden-stem-sway-mid">
-          <path d="M297 276C295 220 307 164 334 107" fill="none" stroke="#496B52" strokeWidth="4" strokeLinecap="round" />
-          <path d="M302 219C322 199 338 198 352 207C336 222 320 228 302 219Z" fill="#667F64" />
-          <path d="M315 170C294 154 278 155 265 165C282 177 299 182 315 170Z" fill="#7C9273" />
-          <g transform="translate(336 102)">
-            <ellipse cx="0" cy="-11" rx="11" ry="19" fill="#E1C28F" />
-            <ellipse cx="14" cy="0" rx="11" ry="19" transform="rotate(70 14 0)" fill="#D5B27B" />
-            <ellipse cx="-14" cy="0" rx="11" ry="19" transform="rotate(-70 -14 0)" fill="#E5CC9D" />
-            <ellipse cx="8" cy="14" rx="11" ry="18" transform="rotate(145 8 14)" fill="#CDA970" />
-            <ellipse cx="-8" cy="14" rx="11" ry="18" transform="rotate(-145 -8 14)" fill="#DBC08C" />
-            <circle cx="0" cy="2" r="7" fill="#8A714B" />
-          </g>
-        </g>
-
-        <g className="garden-stem-sway garden-stem-sway-right">
-          <path d="M361 276C357 236 361 205 376 172" fill="none" stroke="#57775B" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M363 228C346 215 334 216 324 224C338 233 350 237 363 228Z" fill="#6D876B" />
-          <path d="M371 196C382 183 390 182 397 185V207C389 209 380 207 371 196Z" fill="#819578" />
-          <circle cx="377" cy="166" r="10" fill="#B87E75" />
-          <circle cx="367" cy="168" r="8" fill="#CC9486" />
-          <circle cx="384" cy="174" r="8" fill="#D5A28F" />
-          <circle cx="376" cy="174" r="4" fill="#7E654C" />
-        </g>
-
-        <g opacity=".9">
-          <path d="M93 276C91 246 97 221 111 197" fill="none" stroke="#5C785E" strokeWidth="3" />
-          <ellipse cx="114" cy="194" rx="9" ry="15" fill="#C99A87" />
-          <path d="M144 276C145 247 139 227 129 211" fill="none" stroke="#607B60" strokeWidth="3" />
-          <circle cx="127" cy="207" r="9" fill="#D9BC91" />
-          <path d="M236 276C238 247 231 224 218 204" fill="none" stroke="#557159" strokeWidth="3" />
-          <ellipse cx="216" cy="199" rx="9" ry="14" fill="#B98376" />
+        <g className="garden-foreground-right">
+          <path d="M432 463C378 426 324 437 294 482C346 502 392 497 432 463Z" fill="#315640" />
+          <path d="M425 555C384 505 328 505 292 544C339 572 384 577 425 555Z" fill="#45694F" />
+          <path d="M420 650C392 588 338 572 294 603C332 645 373 663 420 650Z" fill="#607B60" />
+          <path d="M398 844C394 690 364 567 309 460" fill="none" stroke="#2C503B" strokeWidth="10" strokeLinecap="round" />
         </g>
       </svg>
 
-      <span className="garden-petal garden-petal-one"></span>
-      <span className="garden-petal garden-petal-two"></span>
-      <div className="garden-door garden-door-left"><span></span></div>
-      <div className="garden-door garden-door-right"><span></span></div>
+      <div className="garden-gate-light"></div>
+      <div className="garden-door-v2 garden-door-left-v2">
+        <div className="garden-door-panel garden-door-panel-top"></div>
+        <div className="garden-door-panel garden-door-panel-bottom"></div>
+        <span className="garden-door-knob"></span>
+      </div>
+      <div className="garden-door-v2 garden-door-right-v2">
+        <div className="garden-door-panel garden-door-panel-top"></div>
+        <div className="garden-door-panel garden-door-panel-bottom"></div>
+        <span className="garden-door-knob"></span>
+      </div>
     </div>
   );
 }
@@ -159,7 +131,8 @@ function EmailEntry({ onEnter }) {
   return (
     <div className="garden-login-page soft-fade">
       <GardenGateScene settled={step === "code"} />
-      <main className="garden-login-form">
+      <main className="garden-journal-sheet garden-paper-reveal">
+        <div className="garden-paper-kicker">花园通行笺 · HUĀHUĀ</div>
         {step === "email" ? (
           <div className="soft-fade">
             <div className="garden-login-heading">
