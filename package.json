@@ -1,0 +1,9 @@
+{
+  "name": "huahua-diary-h5",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-cloudbase.mjs",
+    "test": "for test_file in tests/*.test.js; do node \"$test_file\" || exit 1; done"
+  }
+}
