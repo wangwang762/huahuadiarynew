@@ -20,7 +20,7 @@
     const auth = typeof app.auth === "function"
       ? app.auth({ persistence: "local" })
       : app.auth;
-    const db = typeof app.database === "function" ? app.database() : app.database;
+    const db = typeof app.rdb === "function" ? app.rdb() : null;
     if (!auth || !db) throw new Error("花园服务初始化失败，请稍后再试");
     services = { app, auth, db };
     return services;

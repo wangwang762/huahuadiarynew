@@ -14,7 +14,7 @@ for (const marker of [
   if (!html.includes(marker)) throw new Error(`missing CloudBase HTML marker: ${marker}`);
 }
 
-for (const marker of ["huahuadiary-d4gajnlumc8432f6c", "ap-shanghai", "cloudbase.init", "demo=1"]) {
+for (const marker of ["huahuadiary-d4gajnlumc8432f6c", "ap-shanghai", "cloudbase.init", "app.rdb", "demo=1"]) {
   if (!config.includes(marker)) throw new Error(`missing CloudBase config marker: ${marker}`);
 }
 
@@ -25,10 +25,11 @@ for (const forbidden of ["DEV_CODE", '"123456"']) {
   if (account.includes(forbidden)) throw new Error(`development OTP remains: ${forbidden}`);
 }
 
-for (const marker of ["profiles", "plants", "diary_entries", "ownerId", "createPlantWithFirstEntry", "addDiaryEntry", "updatePlant"]) {
+for (const marker of ["profiles", "plants", "diary_entries", "owner_id", ".from(", "createPlantWithFirstEntry", "addDiaryEntry", "updatePlant"]) {
   if (!data.includes(marker)) throw new Error(`missing CloudBase data marker: ${marker}`);
 }
-if (/\.(?:set|update)\(\{\s*data\s*:/.test(data)) throw new Error("CloudBase v3 writes must receive the document directly");
+if (data.includes(".collection(")) throw new Error("PostgreSQL data service must not call the document database");
+if (!data.includes("onConflict: \"owner_id\"")) throw new Error("profile upsert must target the PostgreSQL owner key");
 if (!seed.includes("window.DEMO_PLANTS")) throw new Error("demo seed snapshot is missing");
 if (!data.includes("window.HHCloud.demo")) throw new Error("data service must isolate explicit demo mode");
 

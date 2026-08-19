@@ -1,9 +1,9 @@
 /* ============================================================
-   花花日记本 MVP · CloudBase per-user data boundary
-   Collections: profiles, plants, diary_entries
+   花花日记本 MVP · CloudBase PostgreSQL per-user data boundary
+   Tables: profiles, plants, diary_entries
    ============================================================ */
 (function () {
-  const COLLECTIONS = {
+  const TABLES = {
     profiles: "profiles",
     plants: "plants",
     diaryEntries: "diary_entries",
@@ -24,35 +24,52 @@
     return id;
   }
 
-  function listFrom(result) {
+  function rowsFrom(result) {
+    if (result && result.error) throw result.error;
     const data = result && result.data !== undefined ? result.data : result;
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.list)) return data.list;
-    if (data && Array.isArray(data.records)) return data.records;
-    return [];
+    return Array.isArray(data) ? data : [];
   }
 
-  function docFrom(result) {
-    const data = result && result.data !== undefined ? result.data : result;
-    if (Array.isArray(data)) return data[0] || null;
-    if (data && data.data && !Array.isArray(data.data)) return data.data;
-    return data && typeof data === "object" ? data : null;
-  }
-
-  function stripMeta(doc) {
-    if (!doc) return null;
-    const { _id, ownerId, createdAt, updatedAt, plantId, ...rest } = doc;
-    return rest;
-  }
-
-  async function readProfile(db, uid) {
-    try {
-      return docFrom(await db.collection(COLLECTIONS.profiles).doc(uid).get());
-    } catch (error) {
-      const raw = String(error && (error.message || error.code) || "").toLowerCase();
-      if (raw.includes("not found") || raw.includes("does not exist") || raw.includes("document_not_found")) return null;
-      throw error;
+  function jsonFrom(value) {
+    if (!value) return {};
+    if (typeof value === "string") {
+      try { return JSON.parse(value); } catch (_) { return {}; }
     }
+    return typeof value === "object" ? value : {};
+  }
+
+  function plantFromRow(row) {
+    return {
+      ...jsonFrom(row.data),
+      id: row.id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  function entryFromRow(row) {
+    return {
+      ...jsonFrom(row.data),
+      id: row.id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  function profileFromRow(row, fallback) {
+    if (!row) return fallback;
+    return {
+      ownerId: row.owner_id,
+      email: row.email || "",
+      onboarded: Boolean(row.onboarded),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  function throwWriteError(result) {
+    if (result && result.error) throw result.error;
+    return result;
   }
 
   async function bootstrap(account) {
@@ -66,24 +83,27 @@
     const uid = currentOwnerId();
     try {
       const { db } = window.HHCloud.get();
-      const [profile, plantsResult, diaryResult] = await Promise.all([
-        readProfile(db, uid),
-        db.collection(COLLECTIONS.plants).where({ ownerId: uid }).limit(100).get(),
-        db.collection(COLLECTIONS.diaryEntries).where({ ownerId: uid }).limit(100).get(),
+      const [profileResult, plantsResult, diaryResult] = await Promise.all([
+        db.from(TABLES.profiles).select("*").eq("owner_id", uid).limit(1),
+        db.from(TABLES.plants).select("*").eq("owner_id", uid).limit(100),
+        db.from(TABLES.diaryEntries).select("*").eq("owner_id", uid).limit(100),
       ]);
-      const byNewest = (a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
-      const entries = listFrom(diaryResult).sort(byNewest);
-      const plants = listFrom(plantsResult).sort(byNewest).map(doc => {
-        const plant = stripMeta(doc);
+      const profileRows = rowsFrom(profileResult);
+      const plantRows = rowsFrom(plantsResult);
+      const diaryRows = rowsFrom(diaryResult);
+      const byNewest = (a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""));
+      const entries = diaryRows.sort(byNewest);
+      const plants = plantRows.sort(byNewest).map(row => {
+        const plant = plantFromRow(row);
         plant.diary = entries
-          .filter(entry => entry.plantId === plant.id)
-          .map(stripMeta);
+          .filter(entry => entry.plant_id === plant.id)
+          .map(entryFromRow);
         return plant;
       });
       window.PLANTS = plants;
       window.CACTUS = plants[0] || null;
       return {
-        profile: profile || { ownerId: uid, email: account.email, onboarded: false },
+        profile: profileFromRow(profileRows[0], { ownerId: uid, email: account.email, onboarded: false }),
         plants,
       };
     } catch (error) {
@@ -96,16 +116,16 @@
     if (window.HHCloud.demo) return { ...(activeAccount || {}), onboarded: true };
     const uid = currentOwnerId();
     const now = new Date().toISOString();
-    const profile = clean({
-      ownerId: uid,
+    const profile = {
+      owner_id: uid,
       email: activeAccount.email || "",
       onboarded: true,
-      createdAt: activeAccount.createdAt || now,
-      updatedAt: now,
-    });
+      created_at: activeAccount.createdAt || now,
+      updated_at: now,
+    };
     const { db } = window.HHCloud.get();
-    await db.collection(COLLECTIONS.profiles).doc(uid).set(profile);
-    return profile;
+    throwWriteError(await db.from(TABLES.profiles).upsert(profile, { onConflict: "owner_id" }));
+    return profileFromRow(profile);
   }
 
   async function createPlantWithFirstEntry(plant) {
@@ -114,32 +134,40 @@
     const { db } = window.HHCloud.get();
     const now = new Date().toISOString();
     const entries = plant.diary || [];
-    const { diary, ...plantFields } = plant;
-    const plantDoc = clean({ ...plantFields, ownerId: uid, createdAt: now, updatedAt: now });
-    await db.collection(COLLECTIONS.plants).doc(plant.id).set(plantDoc);
+    const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
+    const plantRow = clean({ id: plant.id, owner_id: uid, data: plantFields, created_at: now, updated_at: now });
+    throwWriteError(await db.from(TABLES.plants).upsert(plantRow, { onConflict: "id" }));
     try {
       for (const entry of entries) {
-        const entryDoc = clean({ ...entry, ownerId: uid, plantId: plant.id, createdAt: now, updatedAt: now });
-        await db.collection(COLLECTIONS.diaryEntries).doc(entry.id).set(entryDoc);
+        const { id: entryId, createdAt: _createdAt, updatedAt: _updatedAt, ...entryFields } = entry;
+        const entryRow = clean({
+          id: entryId,
+          owner_id: uid,
+          plant_id: plant.id,
+          data: entryFields,
+          created_at: now,
+          updated_at: now,
+        });
+        throwWriteError(await db.from(TABLES.diaryEntries).upsert(entryRow, { onConflict: "id" }));
       }
       await setOnboarded(activeAccount);
       return clone(plant);
     } catch (error) {
       for (const entry of entries) {
-        try { await db.collection(COLLECTIONS.diaryEntries).doc(entry.id).remove(); } catch (_) {}
+        try { await db.from(TABLES.diaryEntries).delete().eq("id", entry.id); } catch (_) {}
       }
-      try { await db.collection(COLLECTIONS.plants).doc(plant.id).remove(); } catch (_) {}
+      try { await db.from(TABLES.plants).delete().eq("id", plant.id); } catch (_) {}
       throw error;
     }
   }
 
   async function updatePlant(plant) {
     if (window.HHCloud.demo) return clone(plant);
-    const uid = currentOwnerId();
-    const { diary, ...plantFields } = plant;
-    const payload = clean({ ...plantFields, ownerId: uid, updatedAt: new Date().toISOString() });
+    currentOwnerId();
+    const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
+    const payload = clean({ data: plantFields, updated_at: new Date().toISOString() });
     const { db } = window.HHCloud.get();
-    await db.collection(COLLECTIONS.plants).doc(plant.id).update(payload);
+    throwWriteError(await db.from(TABLES.plants).update(payload).eq("id", plant.id));
     return clone(plant);
   }
 
@@ -147,14 +175,22 @@
     if (window.HHCloud.demo) return clone(entry);
     const uid = currentOwnerId();
     const now = new Date().toISOString();
-    const payload = clean({ ...entry, ownerId: uid, plantId, createdAt: now, updatedAt: now });
+    const { id, createdAt, updatedAt, ...entryFields } = entry;
+    const row = clean({
+      id: entry.id,
+      owner_id: uid,
+      plant_id: plantId,
+      data: entryFields,
+      created_at: now,
+      updated_at: now,
+    });
     const { db } = window.HHCloud.get();
-    await db.collection(COLLECTIONS.diaryEntries).doc(entry.id).set(payload);
+    throwWriteError(await db.from(TABLES.diaryEntries).upsert(row, { onConflict: "id" }));
     return clone(entry);
   }
 
   window.HHData = {
-    COLLECTIONS,
+    TABLES,
     bootstrap,
     setOnboarded,
     createPlantWithFirstEntry,
