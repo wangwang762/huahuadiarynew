@@ -57,21 +57,38 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
     }
   }
 
-  function pickExisting(pp) {
-    pp.diagnosisPhoto = capturePhoto();
+  async function pickExisting(pp) {
+    pp.diagnosisPhoto = await capturePhoto();
     go("doctorChat", pp);
   }
-  function pickNewFriend() {
+  async function pickNewFriend() {
     const sp = window.SPECIES.find(s => s.species === detectedSpecies) || window.SPECIES[0];
     const draft = window.makeDraftPlant(sp);
-    draft.diagnosisPhoto = capturePhoto();
+    draft.diagnosisPhoto = await capturePhoto();
     go("doctorChat", draft);
   }
 
-  function capturePhoto() {
+  async function capturePhoto() {
     const slot = document.getElementById(`capture-${p.photoId}`);
     const image = slot && slot.shadowRoot && slot.shadowRoot.querySelector(".frame img");
-    return image && image.src ? image.src : window.photoFor(p.photoId);
+    const source = image && image.src ? image.src : window.photoFor(p.photoId);
+    if (!source) return "";
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(source)).blob());
+      const maxEdge = 960;
+      const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+      canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#F7F3E8";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      return canvas.toDataURL("image/jpeg", 0.82);
+    } catch (_) {
+      return source.startsWith("data:image/") || source.startsWith("https://") ? source : "";
+    }
   }
 
 

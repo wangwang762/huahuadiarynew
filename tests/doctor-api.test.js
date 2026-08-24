@@ -11,7 +11,7 @@ for (const marker of ["window.HHDoctorConfig", "fetch(endpoint", 'method: "POST"
   if (!client.includes(marker)) throw new Error(`missing doctor client marker: ${marker}`);
 }
 if (client.includes("app.callFunction")) throw new Error("doctor client still calls CloudBase function");
-for (const marker of ["window.HHDoctorConfig", 'endpoint: ""', "timeoutMs"]) {
+for (const marker of ["window.HHDoctorConfig", 'endpoint: "https://huahua-r-doctor-srnkxzqpos.cn-hangzhou.fcapp.run"', "timeoutMs"]) {
   if (!config.includes(marker)) throw new Error(`missing doctor config marker: ${marker}`);
 }
 for (const marker of ["DASHSCOPE_API_KEY", "qwen3-vl-flash", "/chat/completions", 'action === "summary"', "confidence", "followup_days", "exports.handler"]) {

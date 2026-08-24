@@ -106,7 +106,13 @@ async function generate(messages, maxTokens) {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, max_tokens: maxTokens || 700 }),
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.2,
+      max_tokens: maxTokens || 700,
+      enable_thinking: false,
+    }),
   };
   const { ok, status, result } = typeof fetch === "function"
     ? await fetchJson(`${BASE_URL}/chat/completions`, request)
@@ -195,7 +201,7 @@ confidence表示对结论的把握，信息不足时必须低于0.5。`;
   throw error;
 }
 
-exports.handler = async function handler(rawEvent) {
+async function handle(rawEvent) {
   let event = {};
   try {
     event = eventObject(rawEvent);
@@ -209,6 +215,17 @@ exports.handler = async function handler(rawEvent) {
     if (statusCode >= 500) console.error("flower-doctor", error);
     return response(event, statusCode, { ok: false, message: error && error.message ? error.message : "花大夫服务异常" });
   }
+}
+
+// FC event functions on the Node.js 16 runtime complete through the callback.
+// Returning the Promise as a fallback keeps the same bundle compatible with newer runtimes.
+exports.handler = function handler(rawEvent, context, callback) {
+  const task = handle(rawEvent);
+  if (typeof callback === "function") {
+    task.then(result => callback(null, result), callback);
+    return;
+  }
+  return task;
 };
 
-exports._test = { eventObject, requestBody, safeImage, safeMessages, normalizeSummary };
+exports._test = { eventObject, requestBody, safeImage, safeMessages, normalizeSummary, handle };
