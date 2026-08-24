@@ -1,5 +1,7 @@
 "use strict";
 
+const https = require("https");
+
 const MODEL = process.env.FLOWER_DOCTOR_MODEL || "qwen3-vl-flash";
 const BASE_URL = (process.env.DASHSCOPE_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "");
 const MAX_IMAGE_LENGTH = 7_500_000;
@@ -98,31 +100,58 @@ async function generate(messages, maxTokens) {
   const apiKey = process.env.DASHSCOPE_API_KEY;
   if (!apiKey) throw new Error("花大夫尚未配置 DASHSCOPE_API_KEY");
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 80_000);
-  let dashscopeResponse;
-  try {
-    dashscopeResponse = await fetch(`${BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, max_tokens: maxTokens || 700 }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-
-  const result = await dashscopeResponse.json().catch(() => ({}));
-  if (!dashscopeResponse.ok) {
+  const request = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, max_tokens: maxTokens || 700 }),
+  };
+  const { ok, status, result } = typeof fetch === "function"
+    ? await fetchJson(`${BASE_URL}/chat/completions`, request)
+    : await httpsJson(`${BASE_URL}/chat/completions`, request);
+  if (!ok) {
     const detail = result && result.error && (result.error.message || result.error.code);
-    throw new Error(detail || `模型调用失败（HTTP ${dashscopeResponse.status}）`);
+    throw new Error(detail || `模型调用失败（HTTP ${status}）`);
   }
   const content = result && result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
   if (!content) throw new Error("模型没有返回诊断内容");
   return String(content).trim();
+}
+
+async function fetchJson(url, request) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 80_000);
+  try {
+    const response = await fetch(url, { ...request, signal: controller.signal });
+    return { ok: response.ok, status: response.status, result: await response.json().catch(() => ({})) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function httpsJson(url, request) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, {
+      method: request.method,
+      headers: { ...request.headers, "Content-Length": Buffer.byteLength(request.body) },
+      timeout: 80_000,
+    }, response => {
+      const chunks = [];
+      response.on("data", chunk => chunks.push(chunk));
+      response.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        let result = {};
+        try { result = JSON.parse(text || "{}"); } catch (_) {}
+        const status = Number(response.statusCode) || 500;
+        resolve({ ok: status >= 200 && status < 300, status, result });
+      });
+    });
+    req.on("timeout", () => req.destroy(new Error("模型请求超时")));
+    req.on("error", reject);
+    req.end(request.body);
+  });
 }
 
 function parseJson(text) {
