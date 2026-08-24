@@ -80,7 +80,7 @@ function BottomNav({ tab, onTab }) {
   const items = [
     { id: "diary", label: "日记", icon: "book" },
     { id: "doctor", label: "花大夫", icon: "doctor" },
-    { id: "widget", label: "小组件", icon: "grid" },
+    { id: "garden", label: "花园", icon: "leaf" },
   ];
   return (
     <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 22,

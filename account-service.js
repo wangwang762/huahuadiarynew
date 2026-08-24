@@ -41,7 +41,22 @@
   function sessionUser(result) {
     const data = result && result.data !== undefined ? result.data : result;
     const session = data && (data.session || data);
-    return (data && data.user) || (session && session.user) || null;
+    return (data && data.user) ||
+      (session && session.user) ||
+      (result && result.session && result.session.user) ||
+      (result && result.user) ||
+      null;
+  }
+
+  async function accountFromResultOrSession(auth, result) {
+    let user = sessionUser(result);
+    if (!user) {
+      const sessionResult = await auth.getSession();
+      const sessionError = resultError(sessionResult);
+      if (sessionError) throw sessionError;
+      user = sessionUser(sessionResult);
+    }
+    return { account: accountFromUser(user), user };
   }
 
   function getCurrentAccount() {
@@ -104,10 +119,11 @@
         : await auth.verifyOtp({ email, token: code, messageId });
       const error = resultError(result);
       if (error) throw error;
-      currentAccount = accountFromUser(sessionUser(result));
+      const resolved = await accountFromResultOrSession(auth, result);
+      currentAccount = resolved.account;
       if (!currentAccount) throw new Error("登录成功，但没有取得用户身份");
       pendingVerifications.delete(email);
-      const user = sessionUser(result) || {};
+      const user = resolved.user || {};
       const isNew = Boolean(user.created_at && (!user.last_sign_in_at || user.created_at === user.last_sign_in_at));
       return { account: currentAccount, isNew };
     } catch (error) {

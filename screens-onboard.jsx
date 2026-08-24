@@ -38,7 +38,8 @@ function Onboard({ onComplete, onSkip }) {
       days: 1, mood: "初遇", stars: 5,
       status: "刚住进来", statusTone: "good", photoId: sp.photoId, born: "2026年6月7日",
       diary: [{
-        id: runId + "-d1", day: "今天", date: "6月7日", weather: "🌧 小雨 22°",
+        id: runId + "-d1", day: "今天", date: new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date()),
+        weather: window.HHWeather ? window.HHWeather.currentLabel() : "🌧 小雨 22°",
         mood: "初遇", type: "born", photo: sp.photoId,
         quote: ["第一次见面。它说它叫", { hl: name.trim() || "小绿" }, "，", { grn: "我们的故事从今天开始" }, "。"],
         voice: firstLine, stars: 5,

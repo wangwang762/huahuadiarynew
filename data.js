@@ -504,7 +504,7 @@ window.makeDraftPlant = function (sp) {
 
 // ---- helper: build a new diary entry (record / diagnosis) ----
 window.makeEntry = function (kind, p, payload) {
-  const wx = "🌧 小雨 22°";
+  const wx = window.HHWeather ? window.HHWeather.currentLabel() : "🌧 小雨 22°";
   const clean = s => (s || "").replace(/[*#`>_]/g, "").replace(/\s+/g, " ").trim();
   if (kind === "diagnosis") {
     return {
@@ -514,6 +514,10 @@ window.makeEntry = function (kind, p, payload) {
       symptom: clean(payload.symptom) || "叶片轻微蔫缩、颜色偏暗",
       conclusion: clean(payload.conclusion) || "早期缺水，问题不大",
       plan: clean(payload.plan) || "近期补水一次，之后等土干再浇",
+      points: Array.isArray(payload.points) ? payload.points.slice(0, 4) : [],
+      followupDays: Number(payload.followupDays) || 7,
+      urgency: payload.urgency || "observe",
+      confidence: Number.isFinite(payload.confidence) ? payload.confidence : null,
       voice: payload.voice || "花大夫看过啦，按嘱咐来就好。",
       stars: 4,
     };

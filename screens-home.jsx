@@ -42,8 +42,10 @@ function TitleMark({ style }) {
   );
 }
 
-function WeatherHeader({ weather, titleStyle, flourish }) {
-  const wx = WX[weather] || WX["小雨"];
+function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWeather }) {
+  const preset = WX[weather] || WX["小雨"];
+  const wx = liveWeather && liveWeather.live ? liveWeather : preset;
+  const shownWeather = liveWeather && liveWeather.live ? liveWeather.weather : weather;
   return (
     <div className="sky">
       {/* atmospheric sky */}
@@ -53,7 +55,7 @@ function WeatherHeader({ weather, titleStyle, flourish }) {
       </div>
 
       {/* flourish: weather particles */}
-      {flourish && weather === "小雨" && (
+      {flourish && shownWeather === "小雨" && (
         <div className="sky-bg" style={{ zIndex: 1 }}>
           {Array.from({ length: 18 }).map((_, i) => (
             <span key={i} className="raindrop" style={{ left: `${(i * 5.6 + (i % 3) * 1.5) % 100}%`,
@@ -61,7 +63,7 @@ function WeatherHeader({ weather, titleStyle, flourish }) {
           ))}
         </div>
       )}
-      {flourish && weather === "晴" && (
+      {flourish && shownWeather === "晴" && (
         <div className="sky-bg" style={{ zIndex: 1 }}>
           {Array.from({ length: 9 }).map((_, i) => (
             <span key={i} className="mote" style={{ left: `${10 + i * 9}%`, top: `${30 + (i % 4) * 16}%`,
@@ -69,7 +71,7 @@ function WeatherHeader({ weather, titleStyle, flourish }) {
           ))}
         </div>
       )}
-      {flourish && weather === "多云" && (
+      {flourish && shownWeather === "多云" && (
         <div className="sky-bg" style={{ zIndex: 1 }}>
           <div className="cloud-blob" style={{ left: "12%", top: 36, width: 90, height: 30, animationDuration: "7s" }}></div>
           <div className="cloud-blob" style={{ right: "16%", top: 64, width: 70, height: 24, animationDuration: "9s", animationDelay: "1s" }}></div>
@@ -79,15 +81,14 @@ function WeatherHeader({ weather, titleStyle, flourish }) {
       {/* content */}
       <div style={{ position: "relative", zIndex: 2, padding: "54px 22px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <button onClick={onRefreshWeather} title="点击更新定位和天气" style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Icon name="pin" size={15} color={wx.tint} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>上海</span>
-            <Icon name="chevR" size={12} color="var(--ink-faint)" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{liveWeather && liveWeather.city || "上海"}</span>
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
             <Icon name={wx.icon} size={17} color={wx.tint} />
-            <span style={{ fontWeight: 600 }}>{weather}</span>
-            <span style={{ fontFamily: "var(--f-num)", fontWeight: 600 }}>{wx.temp}</span>
+            <span style={{ fontWeight: 600 }}>{shownWeather}</span>
+            <span style={{ fontFamily: "var(--f-num)", fontWeight: 600 }}>{typeof wx.temp === "number" ? `${wx.temp}°` : wx.temp}</span>
           </div>
         </div>
 
@@ -116,11 +117,22 @@ function DiaryHome({ go, t = {} }) {
   const weather = t.weather || "小雨";
   const titleStyle = t.titleStyle || "清秀";
   const flourish = t.bgFlourish !== false;
+  const [liveWeather, setLiveWeather] = useState(() => window.HHWeather && window.HHWeather.current());
+
+  useEffect(() => {
+    let active = true;
+    if (window.HHWeather) window.HHWeather.load().then(value => { if (active) setLiveWeather(value); });
+    return () => { active = false; };
+  }, []);
+
+  function refreshWeather() {
+    if (window.HHWeather) window.HHWeather.refresh().then(setLiveWeather);
+  }
 
   return (
     <div className="noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 110 }}>
       {/* ---- immersive weather masthead ---- */}
-      <WeatherHeader weather={weather} titleStyle={titleStyle} flourish={flourish} />
+      <WeatherHeader weather={weather} titleStyle={titleStyle} flourish={flourish} liveWeather={liveWeather} onRefreshWeather={refreshWeather} />
 
       {/* ---- filter pills ---- */}
       <div style={{ display: "flex", gap: 9, padding: "16px 22px 0" }}>

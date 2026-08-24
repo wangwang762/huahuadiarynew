@@ -11,10 +11,12 @@ const runtimeFiles = [
   "ios-frame.jsx",
   "cloudbase-config.js",
   "account-service.js",
+  "weather-service.js",
   "data.js",
   "plant-photos.js",
   "plant-cutouts.js",
   "data-service.js",
+  "doctor-service.js",
   "components.jsx",
   "screens-email.jsx",
   "screens-home.jsx",
@@ -25,7 +27,7 @@ const runtimeFiles = [
   "screens-doctor.jsx",
   "screens-profile.jsx",
   "screens-diary.jsx",
-  "screens-widget.jsx",
+  "screens-garden.jsx",
   "tweaks-panel.jsx",
   "app.jsx"
 ];
@@ -59,6 +61,11 @@ const plantSlugs = [
 ];
 
 const extraAssets = [
+  "assets/garden-wall-sunny-v3.webp",
+  "assets/garden-wall-cloudy-v3.webp",
+  "assets/garden-wall-rainy-v4.webp",
+  "assets/garden-chair-v1.webp",
+  "assets/garden-print-v1.webp",
   "assets/plants/zhaozhao-cutout-v2.png",
   "assets/plants/generated/diaolan.png",
   "assets/plants/generated/hupilan.png",

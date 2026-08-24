@@ -6,7 +6,25 @@
 function DoctorTab({ go }) {
   const plants = window.PLANTS;
   const byId = Object.fromEntries(plants.map(p => [p.id, p]));
-  const cases = window.CLINIC_CASES;
+  // Diagnosis diary entries are the source of truth, so the case wall survives reloads
+  // without introducing a second copy of the same medical record.
+  const savedCases = plants.flatMap(plant => (plant.diary || [])
+    .filter(entry => entry.kind === "diagnosis" || entry.type === "doctor")
+    .map((entry, index) => ({
+      id: entry.id,
+      pid: plant.id,
+      no: `No.${String(Math.abs(String(entry.id).split("").reduce((n, c) => n + c.charCodeAt(0), 0)) % 1000).padStart(3, "0")}`,
+      date: entry.date || "最近",
+      seen: entry.day || "最近",
+      complaint: entry.symptom || "未记录主诉",
+      diagnosis: entry.conclusion || "等待进一步观察",
+      rx: entry.plan || "按病历建议继续观察",
+      status: entry.urgency === "recheck" || entry.urgency === "urgent" ? "recheck" : "recovering",
+      progress: entry.urgency === "urgent" ? 10 : entry.urgency === "recheck" ? 35 : 55,
+      note: `建议 ${entry.followupDays || 7} 天后复查${entry.confidence == null ? "" : ` · 诊断把握 ${Math.round(entry.confidence * 100)}%`}`,
+      _index: index,
+    })));
+  const cases = window.HHCloud && window.HHCloud.demo ? window.CLINIC_CASES : savedCases;
   const tabs = window.CLINIC_TABS;
   const [tab, setTab] = useState("all");
 
@@ -59,7 +77,7 @@ function DoctorTab({ go }) {
       </div>
 
       {/* urgency-ordered filter tabs */}
-      <div className="noscroll" style={{ display: "flex", gap: 8, padding: "13px 22px 2px", overflowX: "auto" }}>
+      {cases.length > 0 && <div className="noscroll" style={{ display: "flex", gap: 8, padding: "13px 22px 2px", overflowX: "auto" }}>
         {tabs.map(t => {
           const on = tab === t.id;
           const st = window.CLINIC_STATUS[t.id];
@@ -77,7 +95,7 @@ function DoctorTab({ go }) {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {/* the wall */}
       <div style={{ margin: "12px 16px 0", borderRadius: "var(--r-2xl)", padding: "20px 14px 22px",
@@ -87,7 +105,25 @@ function DoctorTab({ go }) {
           backgroundImage: "radial-gradient(circle at 20% 30%, rgba(120,90,50,0.18) 0 1px, transparent 1.4px), radial-gradient(circle at 65% 70%, rgba(90,65,35,0.16) 0 1px, transparent 1.4px)",
           backgroundSize: "9px 9px, 13px 13px" }}></div>
         <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 18 }}>
-          {shown.length === 0 ? (
+          {cases.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px 18px 28px" }}>
+              <div style={{ width: 58, height: 58, margin: "0 auto", borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center", background: "rgba(251,246,235,.78)",
+                border: "1px solid rgba(92,77,54,.14)" }}>
+                <Icon name="doctor" size={27} color="var(--green)" />
+              </div>
+              <div className="mast" style={{ marginTop: 14, fontSize: 18, color: "var(--ink)" }}>还没有问诊记录</div>
+              <div className="serif" style={{ marginTop: 7, color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.65 }}>
+                第一份病历还空着，有叶子发黄、打蔫或没精神时，带它来看看。
+              </div>
+              <button onClick={() => go("capture", window.UNKNOWN_PLANT, { intake: true })}
+                style={{ marginTop: 17, padding: "10px 18px", borderRadius: "var(--r-pill)",
+                  color: "var(--green-deep)", background: "rgba(251,246,235,.72)",
+                  border: "1px solid rgba(44,97,71,.24)", fontSize: 13.5, fontWeight: 650 }}>
+                带一盆花来看诊
+              </button>
+            </div>
+          ) : shown.length === 0 ? (
             <div className="serif" style={{ textAlign: "center", color: "var(--ink-soft)", fontSize: 13.5, padding: "26px 10px" }}>
               这一类暂时没有病历～
             </div>
@@ -107,8 +143,9 @@ function ClinicCaseCard({ c, p, tilt, go }) {
   const healed = c.status === "healed";
   const dead = c.status === "dead";
   // dead patients may be plants no longer in the garden — use case-level identity
-  const name = c.patientName || p.name;
-  const species = c.patientSpecies || p.species;
+  const patient = p || window.UNKNOWN_PLANT;
+  const name = c.patientName || patient.name;
+  const species = c.patientSpecies || patient.species;
 
   return (
     <div style={{ position: "relative", transform: `rotate(${tilt}deg)` }}>
@@ -136,7 +173,7 @@ function ClinicCaseCard({ c, p, tilt, go }) {
           {/* patient identity */}
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <div style={{ filter: dead ? "grayscale(0.85)" : "none", opacity: dead ? 0.8 : 1 }}>
-              <PlantAvatar plant={p} size={42} />
+              <PlantAvatar plant={patient} size={42} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
@@ -202,7 +239,7 @@ function ClinicCaseCard({ c, p, tilt, go }) {
               {c.note}
             </div>
           ) : (
-            <button onClick={() => go(c.status === "recheck" ? "capture" : "doctorChat", p)}
+            <button onClick={() => go(c.status === "recheck" ? "capture" : "doctorChat", patient)}
               style={{ marginTop: 12, width: "100%", height: 40, borderRadius: "var(--r-pill)",
                 border: "1px solid " + (healed ? "var(--hairline)" : st.color + "55"),
                 background: healed ? "transparent" : st.bg,

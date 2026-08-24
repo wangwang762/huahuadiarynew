@@ -1,8 +1,8 @@
 /* ============================================================
    花花日记本 · App shell / router (history stack)
-   Tabs: 日记 · 花大夫 · 小组件
+   Tabs: 日记 · 花大夫 · 花园
    ============================================================ */
-const TABS = ["diary", "doctor", "widget"];
+const TABS = ["diary", "doctor", "garden"];
 
 function App({ t = {} }) {
   const [, force] = useState(0);
@@ -91,7 +91,7 @@ function App({ t = {} }) {
       {/* base tab (hidden under overlays) */}
       {!isOverlay && baseTab === "diary" && <DiaryHome go={go} t={t} />}
       {!isOverlay && baseTab === "doctor" && <DoctorTab go={go} />}
-      {!isOverlay && baseTab === "widget" && <WidgetScreen go={go} t={t} />}
+      {!isOverlay && baseTab === "garden" && <GardenScreen go={go} />}
 
       {/* overlays */}
       {top.view === "email" && <EmailEntry onEnter={enterGarden} />}

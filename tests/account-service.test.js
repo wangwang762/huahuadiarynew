@@ -3,6 +3,7 @@ const vm = require("vm");
 
 let session = null;
 let loginCount = 0;
+let emptyVerifyResponse = false;
 const auth = {
   async getSession() { return { data: { session }, error: null }; },
   async signInWithOtp({ email }) {
@@ -19,6 +20,7 @@ const auth = {
             last_sign_in_at: loginCount === 1 ? "2026-08-18T08:00:00.000Z" : "2026-08-18T09:00:00.000Z",
           };
           session = { user, access_token: "test-token" };
+          if (emptyVerifyResponse) return { data: {}, error: null };
           return { data: { user, session }, error: null };
         },
       },
@@ -67,6 +69,11 @@ vm.runInContext(fs.readFileSync("account-service.js", "utf8"), context);
   const resent = await api.requestEmailCode("flower.owner@example.com");
   const recovered = await api.verifyEmailCode(resent.email, "654321", resent.verificationInfo);
   if (recovered.isNew) throw new Error("returning account marked as new");
+
+  emptyVerifyResponse = true;
+  const delayed = await api.requestEmailCode("delayed@example.com");
+  const delayedResult = await api.verifyEmailCode(delayed.email, "654321", delayed.verificationInfo);
+  if (delayedResult.account.id !== "cloud-user-id") throw new Error("session fallback did not recover account");
 
   console.log("STANDARD_EMAIL_OTP_FLOW_OK");
 })().catch(error => {

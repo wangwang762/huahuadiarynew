@@ -57,11 +57,23 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
     }
   }
 
-  function pickExisting(pp) { go("doctorChat", pp); }
+  function pickExisting(pp) {
+    pp.diagnosisPhoto = capturePhoto();
+    go("doctorChat", pp);
+  }
   function pickNewFriend() {
     const sp = window.SPECIES.find(s => s.species === detectedSpecies) || window.SPECIES[0];
-    go("doctorChat", window.makeDraftPlant(sp));
+    const draft = window.makeDraftPlant(sp);
+    draft.diagnosisPhoto = capturePhoto();
+    go("doctorChat", draft);
   }
+
+  function capturePhoto() {
+    const slot = document.getElementById(`capture-${p.photoId}`);
+    const image = slot && slot.shadowRoot && slot.shadowRoot.querySelector(".frame img");
+    return image && image.src ? image.src : window.photoFor(p.photoId);
+  }
+
 
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
@@ -303,14 +315,20 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
       guide,
       selfCare: { say: `我是${nm}，${sp.care}。慢慢熟悉我就好～`, tips: guide.items.slice(0, 3) },
     };
+    const diagnosis = dx && typeof dx === "object" ? dx : {};
     const dxEntry = window.makeEntry("diagnosis", newP, {
-      symptom: "初诊 · 叶片状态偏弱",
-      conclusion: "已建档，按医嘱养护",
-      plan: (dx || "").slice(0, 40) || "先调整光照与浇水，观察一周",
+      symptom: diagnosis.symptom || "初诊 · 等待补充观察",
+      conclusion: diagnosis.conclusion || "已建档，继续观察",
+      plan: diagnosis.plan || (typeof dx === "string" ? dx.slice(0, 400) : "补充清晰照片并继续观察"),
+      points: diagnosis.points,
+      followupDays: diagnosis.followupDays,
+      urgency: diagnosis.urgency,
+      confidence: diagnosis.confidence,
       voice: "花大夫看过啦，我会照做的。", photo: photoId,
     });
     const born = {
-      id: newP.id + "-d0", day: "今天", date: "6月8日", weather: "🌧 小雨 22°", mood: "初遇", type: "born", photo: photoId,
+      id: newP.id + "-d0", day: "今天", date: new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date()),
+      weather: window.HHWeather ? window.HHWeather.currentLabel() : "🌧 小雨 22°", mood: "初遇", type: "born", photo: photoId,
       quote: ["在花大夫这儿第一次见面，", { hl: nm }, " 住进了日记本，", { grn: "也留下了第一份病历" }, "。"],
       voice: newP.voice, stars: 5,
     };
@@ -347,7 +365,8 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
           <div style={{ flex: 1 }}>
             <div className="kicker" style={{ color: "var(--green-deep)" }}>花大夫 · 诊断已完成</div>
             <div className="serif" style={{ fontSize: 13.5, color: "var(--ink)", marginTop: 4, lineHeight: 1.55 }}>
-              {((dx || "").replace(/[*#`>_]/g, "").replace(/\s+/g, " ").trim() || "已记录初诊，养护建议会一并存进它的档案。").slice(0, 64)}
+              {((dx && typeof dx === "object" ? (dx.conclusion || dx.plan) : dx || "")
+                .replace(/[*#`>_]/g, "").replace(/\s+/g, " ").trim() || "已记录初诊，养护建议会一并存进它的档案。").slice(0, 96)}
             </div>
           </div>
         </div>

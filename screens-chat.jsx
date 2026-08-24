@@ -1,16 +1,18 @@
 /* ============================================================
-   花花日记本 · 对话 — 与小刺 / 花大夫（接入真实 Claude）
+   花花日记本 · 对话 — 与植物 / 花大夫
    ============================================================ */
 
 // shared chat engine
 function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
   bubbleFrom, quicks, accentDoctor = false, contextBar, onFirstReply, carePlanName,
-  avatar: avatarProp, bubbleBg, bubbleBorder, sendGrad, placeholder, onFinishDx, finishLabel }) {
+  avatar: avatarProp, bubbleBg, bubbleBorder, sendGrad, placeholder, onFinishDx, finishLabel,
+  complete }) {
   const [convo, setConvo] = useState([]);       // {role:'user'|'assistant', content}
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
   const [showQuicks, setShowQuicks] = useState(true);
   const [finished, setFinished] = useState(null);  // diagnosis summary, set when user ends consult
+  const [serviceError, setServiceError] = useState("");
   const scrollRef = useRef(null);
   const firedFirst = useRef(false);
 
@@ -27,6 +29,7 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
     const next = [...convo, { role: "user", content: msg }];
     setConvo(next);
     setTyping(true);
+    setServiceError("");
 
     const messages = [
       { role: "user", content: systemPrompt },
@@ -35,11 +38,16 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
     ];
     let reply = "";
     try {
-      reply = await window.claude.complete({ messages });
+      if (complete) reply = await complete(next);
+      else if (window.claude && typeof window.claude.complete === "function") reply = await window.claude.complete({ messages });
+      else throw new Error("对话服务尚未接通");
     } catch (e) {
-      reply = accentDoctor
-        ? "网络好像不太稳～简单说：仙人掌干透浇透，这次约 60ml，之后等土全干再浇就好。"
-        : "（信号不好…）哼，我才懒得理你呢。（其实有点想多说两句）";
+      setTyping(false);
+      if (accentDoctor) {
+        setServiceError(e && e.message ? e.message : "花大夫暂时没有接通，请稍后重试");
+        return;
+      }
+      reply = "（信号不好…）等网络恢复了再聊吧。";
     }
     reply = (reply || "").trim() || "……";
     setTyping(false);
@@ -81,12 +89,20 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
           <Bubble key={i} from={m.role === "user" ? "me" : "them"} avatar={avatar} bb={bb}>{m.content}</Bubble>
         ))}
         {typing && <Typing avatar={avatar} />}
+        {serviceError && <div role="alert" style={{ margin: "6px 0 12px 45px", padding: "10px 12px",
+          borderRadius: 12, background: "rgba(200,85,60,.08)", border: "1px solid rgba(200,85,60,.16)",
+          color: "var(--coral)", fontSize: 12.5, lineHeight: 1.5 }}>{serviceError}。这次没有生成诊断建议。</div>}
         {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && !finished && (
           <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 12px" }}>
             <button onClick={async () => {
                 const conclusion = [...convo].reverse().find(m => m.role === "assistant")?.content || opener;
-                const sum = await onFinishDx(conclusion);
-                if (sum) setFinished(sum);
+                setServiceError("");
+                try {
+                  const sum = await onFinishDx(conclusion, [{ role: "assistant", content: opener }, ...convo]);
+                  if (sum) setFinished(sum);
+                } catch (e) {
+                  setServiceError(e && e.message ? e.message : "病历没有整理成功，请稍后重试");
+                }
               }}
               style={{ height: 36, padding: "0 16px", fontSize: 13, color: "var(--green-deep)", fontWeight: 600,
                 background: "var(--green-soft)", border: "1.5px solid var(--green)", borderRadius: "var(--r-pill)",
@@ -224,19 +240,25 @@ function DoctorChat({ go, plant, onSaveEntry }) {
       <Icon name="camera" size={16} color="var(--green-deep)" /> 正在分析 · {p.isNew ? `你带来的新朋友（${p.species}）` : `你上传的${p.name}（${p.species}）`}照片
     </div>
   );
-  async function finishDx(conclusion) {
-    if (p.isNew) { go("archiveNew", p, { dx: conclusion }); return null; }
+  const diagnosisImage = p.diagnosisPhoto || "";
+  async function finishDx(conclusion, messages) {
+    const summary = await window.HHDoctor.summarize({ plant: p, image: diagnosisImage, messages });
+    if (p.isNew) { go("archiveNew", p, { dx: summary }); return null; }
     if (onSaveEntry) {
       const entry = window.makeEntry("diagnosis", p, {
-        symptom: "叶片轻微葙缩、颜色偏暗",
-        conclusion: "早期缺水，问题不大",
-        plan: (conclusion || "").slice(0, 40) || "近期补水一次，之后等土干再浇",
+        symptom: summary.symptom,
+        conclusion: summary.conclusion,
+        plan: summary.plan,
+        points: summary.points,
+        followupDays: summary.followupDays,
+        urgency: summary.urgency,
+        confidence: summary.confidence,
         voice: p.voice,
         photo: p.photoId,
       });
       await onSaveEntry(p, entry);
     }
-    return { plantName: p.name, points: "散射光 · 多通风 · 土干透再浇" };
+    return { plantName: p.name, points: (summary.points || []).join(" · ") || summary.plan };
   }
   return (
     <ChatBase go={go}
@@ -244,7 +266,8 @@ function DoctorChat({ go, plant, onSaveEntry }) {
       subtitle={p.isNew ? "正在看一位新朋友" : `第三方养护专家 · 正在看 ${p.name}`}
       headerAvatar={docAv}
       systemPrompt={window.doctorSystemPrompt(p.isNew ? "这位新朋友" : p.name)}
-      opener={window.doctorOpener}
+      opener="照片我收到了。先告诉我：最近一次浇水是什么时候，盆土现在偏干还是偏湿？我会结合照片一起判断。"
+      complete={(messages) => window.HHDoctor.reply({ plant: p, image: diagnosisImage, messages })}
       quicks={["浇多少水合适？", "多久浇一次？", "叶片发皱怎么办", "需要换盆吗"]}
       accentDoctor
       carePlanName={p.isNew ? "这位新朋友" : p.name}
