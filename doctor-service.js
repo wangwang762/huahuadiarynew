@@ -1,7 +1,5 @@
-/* 花大夫客户端：只调用 CloudBase 云函数，模型密钥绝不进入浏览器。 */
+/* 花大夫客户端：只调用阿里云 FC HTTP 接口，模型密钥绝不进入浏览器。 */
 (function () {
-  const FUNCTION_NAME = "flower-doctor";
-
   function cleanMessages(messages) {
     return (messages || []).slice(-12).map(message => ({
       role: message.role === "assistant" ? "assistant" : "user",
@@ -20,18 +18,41 @@
     };
   }
 
+  function endpointUrl() {
+    const config = window.HHDoctorConfig || {};
+    const value = String(config.endpoint || "").trim();
+    if (!value) throw new Error("花大夫的阿里云服务地址还没有配置");
+    let url;
+    try { url = new URL(value, window.location.href); } catch (_) {
+      throw new Error("花大夫服务地址格式不正确");
+    }
+    const local = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    if (url.protocol !== "https:" && !local) throw new Error("花大夫服务必须使用 HTTPS");
+    return url.toString();
+  }
+
   async function invoke(action, payload) {
     if (window.HHCloud.demo) throw new Error("演示模式不调用真实花大夫");
-    const { app } = window.HHCloud.get();
-    if (!app || typeof app.callFunction !== "function") {
-      throw new Error("花大夫服务没有加载出来，请稍后重试");
+    const endpoint = endpointUrl();
+    const config = window.HHDoctorConfig || {};
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Number(config.timeoutMs) || 85_000);
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...payload }),
+        signal: controller.signal,
+        credentials: "omit",
+      });
+    } catch (error) {
+      if (error && error.name === "AbortError") throw new Error("花大夫看得有点久，请重新试一次");
+      throw new Error("花大夫服务暂时连接不上，请稍后重试");
+    } finally {
+      clearTimeout(timer);
     }
-    const response = await app.callFunction({
-      name: FUNCTION_NAME,
-      data: { action, ...payload },
-      parse: true,
-    });
-    const result = response && response.result;
+    const result = await response.json().catch(() => ({}));
     if (!result || result.ok !== true) {
       throw new Error((result && result.message) || "花大夫暂时没有接通，请稍后重试");
     }
@@ -56,5 +77,5 @@
     return result.summary;
   }
 
-  window.HHDoctor = { FUNCTION_NAME, reply, summarize };
+  window.HHDoctor = { reply, summarize };
 })();

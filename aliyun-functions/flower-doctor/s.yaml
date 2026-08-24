@@ -1,0 +1,31 @@
+edition: 3.0.0
+name: huahua-flower-doctor
+access: default
+
+vars:
+  region: cn-hangzhou
+
+resources:
+  flower_doctor:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: huahua-flower-doctor
+      description: 花花日记本植物问诊模型代理
+      runtime: nodejs20
+      code: ./
+      handler: index.handler
+      memorySize: 256
+      diskSize: 512
+      timeout: 90
+      internetAccess: true
+      triggers:
+        - triggerName: flower-doctor-http
+          triggerType: http
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            disableURLInternet: false
+            methods:
+              - POST
+              - OPTIONS

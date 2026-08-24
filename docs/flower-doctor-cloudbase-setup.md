@@ -1,4 +1,6 @@
-# 花大夫真实 API 部署
+# 花大夫 CloudBase 部署（旧方案，暂不采用）
+
+> 当前 MVP 已改用阿里云函数计算，部署方式见 `docs/flower-doctor-aliyun-setup.md`。保留本文仅用于回滚参考，请勿同时部署两套花大夫函数。
 
 前端调用 CloudBase 云函数 `flower-doctor`，云函数通过阿里云百炼的 OpenAI 兼容接口调用 Qwen 视觉模型。API Key 只保存在云函数环境变量中，不会下发到浏览器。
 

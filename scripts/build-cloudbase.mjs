@@ -16,6 +16,7 @@ const runtimeFiles = [
   "plant-photos.js",
   "plant-cutouts.js",
   "data-service.js",
+  "doctor-config.js",
   "doctor-service.js",
   "components.jsx",
   "screens-email.jsx",
