@@ -7,17 +7,48 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   const [step, setStep] = useState("shoot"); // shoot | analyzing | identify | good | abnormal
   const [voice, setVoice] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [recognition, setRecognition] = useState(null);
+  const [recognitionError, setRecognitionError] = useState("");
+  const [matchedPlants, setMatchedPlants] = useState([]);
+  const [diagnosisPhoto, setDiagnosisPhoto] = useState("");
   const needsDoctor = p.statusTone === "warn";
-
-  // (demo: a vision model reads the photo and returns a species guess.)
-  const detectedSpecies = "多肉";
-  const sameSpecies = window.PLANTS.filter(pp => pp.species.includes(detectedSpecies));
 
   async function analyze() {
     setStep("analyzing");
     // clinic walk-in: AI must first work out WHICH plant this is
     if (intake) {
-      setTimeout(() => setStep("identify"), 1900);
+      setRecognitionError("");
+      const image = await capturePhoto();
+      setDiagnosisPhoto(image);
+      try {
+        const result = await window.HHDoctor.recognize({ image, plants: window.PLANTS });
+        const ids = Array.isArray(result && result.matchedIds) ? result.matchedIds : [];
+        const byId = new Map(window.PLANTS.map(item => [String(item.id), item]));
+        const matches = ids.map(id => byId.get(String(id))).filter(Boolean);
+        const recognition = {
+          species: String(result && result.species || "待识别"),
+          confidence: Number(result && result.confidence) || 0,
+          note: String(result && result.note || ""),
+          matchedIds: ids,
+        };
+        setRecognition(recognition);
+        setMatchedPlants(matches);
+        if (matches.length === 1) {
+          const matched = matches[0];
+          matched.diagnosisPhoto = image;
+          go("doctorChat", matched);
+          return;
+        }
+        if (matches.length > 1) {
+          setStep("identify");
+          return;
+        }
+        startNewFriendDiagnosis(recognition.species, image);
+      } catch (error) {
+        const message = error && error.message ? error.message : "这次没认准";
+        setRecognitionError(message);
+        startNewFriendDiagnosis("待识别", image, true, message);
+      }
       return;
     }
     // (production: a vision model reads the photo — soil & leaves — to triage.)
@@ -58,14 +89,24 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   }
 
   async function pickExisting(pp) {
-    pp.diagnosisPhoto = await capturePhoto();
+    pp.diagnosisPhoto = diagnosisPhoto || await capturePhoto();
     go("doctorChat", pp);
   }
-  async function pickNewFriend() {
-    const sp = window.SPECIES.find(s => s.species === detectedSpecies) || window.SPECIES[0];
+  function startNewFriendDiagnosis(species, image, fromRecognitionFailure = false, errorMessage = "") {
+    const cleanSpecies = String(species || "待识别").trim();
+    const sp = window.SPECIES.find(s => s.species === cleanSpecies)
+      || window.SPECIES.find(s => cleanSpecies.includes(s.species) || s.species.includes(cleanSpecies))
+      || window.SPECIES[0];
     const draft = window.makeDraftPlant(sp);
-    draft.diagnosisPhoto = await capturePhoto();
+    draft.species = cleanSpecies || "待识别";
+    draft.prefillSpecies = draft.species === "待识别" ? "" : draft.species;
+    draft.recognitionFailed = fromRecognitionFailure;
+    draft.recognitionError = fromRecognitionFailure ? errorMessage || "这次没认准" : "";
+    draft.diagnosisPhoto = image || diagnosisPhoto;
     go("doctorChat", draft);
+  }
+  async function pickNewFriend() {
+    startNewFriendDiagnosis(recognition && recognition.species, diagnosisPhoto || await capturePhoto());
   }
 
   async function capturePhoto() {
@@ -155,7 +196,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
 
         {/* ---- IDENTIFY: which plant is this? (clinic intake) ---- */}
         {step === "identify" && (
-          <IdentifyStep species={detectedSpecies} candidates={sameSpecies}
+          <IdentifyStep species={(recognition && recognition.species) || "待识别"} candidates={matchedPlants}
             onPick={pickExisting} onNew={pickNewFriend} onRetry={() => setStep("shoot")} />
         )}
 
@@ -244,7 +285,7 @@ function IdentifyStep({ species, candidates, onPick, onNew, onRetry }) {
       </div>
       <div className="serif" style={{ fontSize: 15.5, color: "var(--ink)", textAlign: "center", lineHeight: 1.6, padding: "0 8px" }}>
         {ambiguous
-          ? <>你有 <em style={{ color: "var(--coral)", fontStyle: "normal" }}>{candidates.length}</em> 盆「{species}」长得很像，<br />这是<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>哪一盆</em>呢？</>
+          ? <>花花认出它像「{species}」，你的花园里有 <em style={{ color: "var(--coral)", fontStyle: "normal" }}>{candidates.length}</em> 位老朋友很像。<br />这是<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>哪一位</em>呢？</>
           : candidates.length === 1
             ? <>这盆是你的 <em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>{candidates[0].name}</em> 吗？</>
             : <>花园里还没有「{species}」，<br />这是位<em style={{ color: "var(--coral)", fontStyle: "normal" }}>新朋友</em>吗？</>}
@@ -281,7 +322,7 @@ function IdentifyStep({ species, candidates, onPick, onNew, onRetry }) {
             <Icon name="plus" size={22} color="#2C7659" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="mast" style={{ fontSize: 16, color: "#2C7659" }}>{candidates.length ? "都不是，是新朋友" : "是的，新朋友"}</div>
+            <div className="mast" style={{ fontSize: 16, color: "#2C7659" }}>{candidates.length ? "都不是，先按新朋友问诊" : "先按新朋友问诊"}</div>
             <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 2 }}>先看诊，结束后帮它建一份档案</div>
           </div>
           <Icon name="chevR" size={18} color="#2C7659" />
@@ -298,9 +339,11 @@ window.IdentifyStep = IdentifyStep;
    ArchiveNew — after diagnosing a NEW plant, summarise & 建档
    ============================================================ */
 function ArchiveNew({ draft, dx, onArchive, onBack }) {
-  const sp0 = (draft && draft._sp) || window.SPECIES[0];
+  const prefillSpecies = String(draft && (draft.prefillSpecies || draft.species) || "").trim();
+  const sp0 = window.SPECIES.find(s => s.species === prefillSpecies)
+    || (draft && draft._sp) || window.SPECIES[0];
   const [sp, setSp] = useState(sp0);
-  const [speciesText, setSpeciesText] = useState(sp0.species);
+  const [speciesText, setSpeciesText] = useState(prefillSpecies);
   const [name, setName] = useState("");
   const [traits, setTraits] = useState(sp0.traits.slice(0, 3));
   const [saving, setSaving] = useState(false);
@@ -319,7 +362,7 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
     setSaving(true);
     setSaveError("");
     const nm = name.trim() || "新朋友";
-    const finalSpecies = speciesText.trim() || sp.species;
+    const finalSpecies = speciesText.trim() || (draft && draft.recognitionFailed ? "待识别" : sp.species);
     const guide = window.CARE_GUIDE[sp.shape] || window.CARE_GUIDE.succulent;
     const newP = {
       id: "u" + Date.now(), name: nm, species: finalSpecies, shape: sp.shape,
@@ -394,7 +437,10 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
 
         {/* species — free text, with quick presets */}
         <div style={{ width: "100%", marginTop: 18 }}>
-          <div style={{ fontSize: 12.5, color: "var(--ink-faint)", marginBottom: 8 }}>它是什么品种？（识别仅供参考，可直接填写）</div>
+          <div style={{ fontSize: 12.5, color: "var(--ink-faint)", marginBottom: 8 }}>
+            它是什么品种？（识别仅供参考，可直接填写）
+            {prefillSpecies && !draft.recognitionFailed && <span style={{ color: "var(--green-deep)" }}> · 识别结果已带入，可修改</span>}
+          </div>
           <input value={speciesText} onChange={e => setSpeciesText(e.target.value)} maxLength={12} placeholder="输入品种，如「虎皮兰」"
             style={{ width: "100%", height: 46, borderRadius: 12, border: `1.5px solid ${sp.accent}40`,
               background: "var(--glass-strong)", padding: "0 15px", fontSize: 15.5, fontFamily: "var(--f-journal)",
@@ -446,6 +492,11 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
             justifyContent: "center", gap: 9, background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})`,
             opacity: saving ? .68 : 1, boxShadow: `0 8px 20px ${sp.accent}4d` }}>
           <Icon name="book" size={20} color="#fff" /> {saving ? "正在建档……" : "建档，存进日记本"}
+        </button>
+        <button onClick={onBack} disabled={saving}
+          style={{ marginTop: 13, width: "100%", padding: "8px 0", color: "var(--ink-faint)",
+            fontSize: 14, fontFamily: "var(--f-journal)", opacity: saving ? .55 : 1 }}>
+          暂不建档，返回问诊
         </button>
       </div>
     </div>

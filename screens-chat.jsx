@@ -234,10 +234,17 @@ window.CactusChat = PlantChat;
 function DoctorChat({ go, plant, onSaveEntry }) {
   const p = plant || window.PLANTS[0];
   const docAv = <DoctorAvatar size={38} />;
+  const recognitionMessage = p.recognitionFailed
+    ? "识别暂时没成功，先按新朋友问诊，不耽误花大夫判断"
+    : p.isNew
+      ? `认出它像「${p.species}」· 正在看一位新朋友`
+      : `认出是 ${p.name}（${p.species}）· 正在结合新照片分析`;
   const ctx = (
     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px",
-      background: "var(--green-bubble)", fontSize: 12.5, color: "var(--green-deep)", fontWeight: 600 }}>
-      <Icon name="camera" size={16} color="var(--green-deep)" /> 正在分析 · {p.isNew ? `你带来的新朋友（${p.species}）` : `你上传的${p.name}（${p.species}）`}照片
+      background: p.recognitionFailed ? "rgba(201,138,60,.12)" : "var(--green-bubble)", fontSize: 12.5,
+      color: p.recognitionFailed ? "var(--terra)" : "var(--green-deep)", fontWeight: 600 }}>
+      <Icon name={p.recognitionFailed ? "bell" : "camera"} size={16}
+        color={p.recognitionFailed ? "var(--terra)" : "var(--green-deep)"} /> {recognitionMessage}
     </div>
   );
   const diagnosisImage = p.diagnosisPhoto || "";

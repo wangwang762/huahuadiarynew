@@ -77,5 +77,48 @@
     return result.summary;
   }
 
-  window.HHDoctor = { reply, summarize };
+  function speciesKeys(value) {
+    const source = String(value || "").trim();
+    const clean = part => String(part || "")
+      .toLowerCase()
+      .replace(/[\s·•・/／、,，()（）\-—_]+/g, "")
+      .replace(/(?:植物|盆栽)$/g, "");
+    return new Set([source, ...source.split(/[·•・/／、,，()（）\-—_]+/)]
+      .map(clean)
+      .filter(key => key && key !== "待识别"));
+  }
+
+  function speciesMatches(candidateSpecies, recognizedSpecies) {
+    const candidateKeys = speciesKeys(candidateSpecies);
+    const recognizedKeys = speciesKeys(recognizedSpecies);
+    return [...recognizedKeys].some(key => candidateKeys.has(key));
+  }
+
+  async function recognize({ image, plants }) {
+    const candidates = (plants || []).map(plant => ({
+      id: String(plant.id || ""),
+      name: String(plant.name || ""),
+      species: String(plant.species || ""),
+    })).filter(item => item.id && item.species);
+    const result = await invoke("recognize", { image: image || "", candidates });
+    const raw = result && result.recognition || {};
+    const species = String(raw.species || "待识别");
+    const confidence = Math.max(0, Math.min(1, Number(raw.confidence) || 0));
+    const confident = confidence >= 0.55 && species !== "待识别";
+    const validIds = new Set(candidates.map(item => item.id));
+    const speciesMatchedIds = confident ? candidates
+      .filter(item => speciesMatches(item.species, species))
+      .map(item => item.id) : [];
+    const fallbackMatchedIds = Array.isArray(raw.matchedIds)
+      ? [...new Set(raw.matchedIds.map(String).filter(id => validIds.has(id)))]
+      : [];
+    return {
+      species,
+      confidence,
+      matchedIds: confident ? (speciesMatchedIds.length ? speciesMatchedIds : fallbackMatchedIds) : [],
+      note: String(raw.note || ""),
+    };
+  }
+
+  window.HHDoctor = { reply, summarize, recognize };
 })();

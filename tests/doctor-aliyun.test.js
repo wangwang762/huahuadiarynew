@@ -11,13 +11,26 @@ global.fetch = async (url, options) => {
   const wantsSummary = body.messages.some(message =>
     typeof message.content === "string" && message.content.includes("只输出一个JSON对象")
   );
+  const wantsRecognition = body.messages.some(message =>
+    (typeof message.content === "string" && message.content.includes("植物识别路由"))
+    || (Array.isArray(message.content) && message.content.some(part =>
+      part && part.type === "text" && String(part.text || "").includes("植物识别路由")
+    ))
+  );
   return {
     ok: true,
     json: async () => ({
       choices: [{
         message: {
-          content: wantsSummary
+          content: wantsRecognition
             ? JSON.stringify({
+                species: "绿萝",
+                confidence: 0.88,
+                matched_ids: ["p1", "invented"],
+                note: "叶形与绿萝相符",
+              })
+            : wantsSummary
+              ? JSON.stringify({
                 symptom: "叶尖发黄",
                 conclusion: "可能浇水偏多",
                 plan: "暂停浇水并加强通风",
@@ -26,7 +39,7 @@ global.fetch = async (url, options) => {
                 urgency: "observe",
                 confidence: 0.46,
               })
-            : "照片里能看到叶尖发黄。请告诉我盆土现在偏干还是偏湿？",
+              : "照片里能看到叶尖发黄。请告诉我盆土现在偏干还是偏湿？",
         },
       }],
     }),
@@ -72,6 +85,20 @@ function event(method, payload, origin = "https://huahua.example") {
   assert.equal(summaryBody.summary.followupDays, 5);
   assert.equal(summaryBody.summary.urgency, "observe");
   assert.equal(summaryBody.summary.confidence, 0.46);
+
+  const recognitionResponse = await handler(event("POST", {
+    action: "recognize",
+    image: "data:image/jpeg;base64,AA==",
+    candidates: [
+      { id: "p1", name: "罗罗", species: "绿萝" },
+      { id: "p2", name: "阿绿", species: "绿萝" },
+    ],
+  }));
+  const recognitionBody = JSON.parse(recognitionResponse.body);
+  assert.equal(recognitionBody.ok, true);
+  assert.equal(recognitionBody.recognition.species, "绿萝");
+  assert.deepEqual(recognitionBody.recognition.matchedIds, ["p1"]);
+  assert.equal(recognitionBody.recognition.confidence, 0.88);
 
   const rejected = await handler(event("POST", { action: "unknown" }));
   assert.equal(rejected.statusCode, 400);

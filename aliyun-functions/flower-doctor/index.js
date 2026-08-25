@@ -71,6 +71,27 @@ function safeMessages(input) {
   }));
 }
 
+function safeCandidates(input) {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, 60).map(item => ({
+    id: String((item && item.id) || "").slice(0, 80),
+    name: String((item && item.name) || "").slice(0, 50),
+    species: String((item && item.species) || "").slice(0, 80),
+  })).filter(item => item.id && item.species);
+}
+
+function normalizeRecognition(value, candidates) {
+  const validIds = new Set(candidates.map(item => item.id));
+  return {
+    species: String(value.species || "待识别").slice(0, 80),
+    confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
+    matchedIds: Array.isArray(value.matched_ids)
+      ? [...new Set(value.matched_ids.map(String).filter(id => validIds.has(id)))].slice(0, 8)
+      : [],
+    note: String(value.note || "").slice(0, 160),
+  };
+}
+
 function safeImage(image) {
   if (!image) return "";
   const value = String(image);
@@ -183,9 +204,24 @@ async function execute(payload) {
   const action = payload.action;
   const plant = payload.plant || {};
   const image = safeImage(payload.image);
+  const candidates = safeCandidates(payload.candidates);
   const history = safeMessages(payload.messages);
   const conversation = [{ role: "system", content: SYSTEM_PROMPT }, firstUserMessage(plant, image), ...history];
 
+  if (action === "recognize") {
+    if (!image) {
+      return { ok: true, recognition: normalizeRecognition({}, candidates), model: MODEL };
+    }
+    const candidateText = candidates.length
+      ? candidates.map(item => `${item.id} | ${item.name} | ${item.species}`).join("\n")
+      : "（花园暂无植物）";
+    const prompt = `植物识别路由。根据照片识别最可能的家庭植物品类，并与候选档案按品类匹配。候选：\n${candidateText}\n只输出JSON：{"species":"品类","confidence":0.0,"matched_ids":["候选ID"],"note":"可见依据"}。matched_ids只能来自候选；不确定时降低confidence并返回空数组。`;
+    const raw = await generate([
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] },
+    ], 360);
+    return { ok: true, recognition: normalizeRecognition(parseJson(raw), candidates), model: MODEL };
+  }
   if (action === "chat") {
     return { ok: true, reply: await generate(conversation, 700), model: MODEL };
   }
@@ -228,4 +264,4 @@ exports.handler = function handler(rawEvent, context, callback) {
   return task;
 };
 
-exports._test = { eventObject, requestBody, safeImage, safeMessages, normalizeSummary, handle };
+exports._test = { eventObject, requestBody, safeImage, safeMessages, safeCandidates, normalizeRecognition, normalizeSummary, handle };
