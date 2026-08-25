@@ -163,3 +163,29 @@ Expected: all pass.
 git add scripts/test-guest-login-browser.cjs
 git commit -m "test: cover guest login in browser"
 ```
+
+### Task 5: Balance the journal header with one botanical sticker
+
+**Files:**
+- Modify: `screens-email.jsx`
+- Modify: `styles.css`
+- Modify: `tests/garden-gate-login.test.js`
+- Modify: `花花日记本.html`
+
+**Interfaces:**
+- Consumes: the existing minimal one-photo journal scene
+- Produces: `.journal-botanical-sticker` and `.journal-sticker-pin` as the only additional decorative group
+
+- [ ] **Step 1: Extend the login visual contract**
+
+Require one `journal-botanical-sticker`, one `journal-sticker-pin`, and the `GROW SLOWLY` label while continuing to reject the former generic collage pin and multi-decoration hooks.
+
+- [ ] **Step 2: Add the botanical sticker markup and styling**
+
+Render a compact CSS/SVG botanical label in the upper-left blank area, use a muted coral paper color and dark red pin, and keep it behind the login form. Move `.collage-login-form` down by approximately 18px without changing the OTP or guest behavior.
+
+- [ ] **Step 3: Bump the affected cache keys and verify**
+
+Run: `npm test && npm run build && git diff --check`
+
+Expected: all test markers pass, the CloudBase bundle builds, and the 390×844 browser screenshot has no overlap or horizontal overflow.
