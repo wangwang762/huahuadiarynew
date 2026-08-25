@@ -74,6 +74,14 @@ function App({ t = {} }) {
     const next = hydrated.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard";
     setStack([{ view: next }]);
   }
+  async function enterGuestGarden() {
+    const guestAccount = { id: "guest-local", email: "", guest: true, onboarded: false };
+    const garden = await window.HHData.bootstrap(guestAccount);
+    const hydrated = { ...guestAccount, onboarded: !!(garden.profile && garden.profile.onboarded) };
+    setAccount(hydrated);
+    setPlants([...garden.plants]);
+    setStack([{ view: "onboard" }]);
+  }
   async function addEntry(pl, entry) {
     await window.HHData.addDiaryEntry(pl.id, entry);
     pl.diary.unshift(entry);
@@ -94,7 +102,7 @@ function App({ t = {} }) {
       {!isOverlay && baseTab === "garden" && <GardenScreen go={go} />}
 
       {/* overlays */}
-      {top.view === "email" && <EmailEntry onEnter={enterGarden} />}
+      {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />}
       {top.view === "onboard" && <Onboard onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake} onSaveEntry={addEntry} />}

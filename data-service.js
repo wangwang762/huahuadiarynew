@@ -8,6 +8,7 @@
     plants: "plants",
     diaryEntries: "diary_entries",
   };
+  const GUEST_STORAGE_KEY = "huahua.guestGarden.v1";
   let activeAccount = null;
 
   function clone(value) {
@@ -22,6 +23,46 @@
     const id = activeAccount && activeAccount.id;
     if (!id) throw new Error("请先登录，再打开自己的花园");
     return id;
+  }
+
+  function isGuestAccount(account = activeAccount) {
+    return Boolean(account && account.guest);
+  }
+
+  function emptyGuestGarden(account = activeAccount) {
+    return {
+      profile: {
+        ownerId: (account && account.id) || "guest-local",
+        email: "",
+        onboarded: false,
+        guest: true,
+      },
+      plants: [],
+    };
+  }
+
+  function readGuestGarden(account = activeAccount) {
+    const fallback = emptyGuestGarden(account);
+    try {
+      const raw = window.localStorage.getItem(GUEST_STORAGE_KEY);
+      if (!raw) return fallback;
+      const saved = JSON.parse(raw);
+      return {
+        profile: { ...fallback.profile, ...(saved && saved.profile ? saved.profile : {}), guest: true },
+        plants: Array.isArray(saved && saved.plants) ? clone(saved.plants) : [],
+      };
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeGuestGarden(garden) {
+    const safeGarden = {
+      profile: { ...garden.profile, guest: true },
+      plants: clone(garden.plants || []),
+    };
+    window.localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(safeGarden));
+    return clone(safeGarden);
   }
 
   function rowsFrom(result) {
@@ -74,6 +115,12 @@
 
   async function bootstrap(account) {
     activeAccount = account;
+    if (isGuestAccount(account)) {
+      const garden = readGuestGarden(account);
+      window.PLANTS = clone(garden.plants);
+      window.CACTUS = window.PLANTS[0] || null;
+      return { profile: clone(garden.profile), plants: window.PLANTS };
+    }
     if (window.HHCloud.demo) {
       window.PLANTS = clone(window.DEMO_PLANTS || []);
       window.CACTUS = window.PLANTS[0] || null;
@@ -113,6 +160,12 @@
 
   async function setOnboarded(account) {
     activeAccount = account || activeAccount;
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      garden.profile = { ...garden.profile, onboarded: true, guest: true };
+      writeGuestGarden(garden);
+      return clone(garden.profile);
+    }
     if (window.HHCloud.demo) return { ...(activeAccount || {}), onboarded: true };
     const uid = currentOwnerId();
     const now = new Date().toISOString();
@@ -129,6 +182,16 @@
   }
 
   async function createPlantWithFirstEntry(plant) {
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      const savedPlant = clone(plant);
+      const existingIndex = garden.plants.findIndex(item => item.id === savedPlant.id);
+      if (existingIndex >= 0) garden.plants.splice(existingIndex, 1, savedPlant);
+      else garden.plants.unshift(savedPlant);
+      garden.profile = { ...garden.profile, onboarded: true, guest: true };
+      writeGuestGarden(garden);
+      return clone(savedPlant);
+    }
     if (window.HHCloud.demo) return clone(plant);
     const uid = currentOwnerId();
     const { db } = window.HHCloud.get();
@@ -162,6 +225,14 @@
   }
 
   async function updatePlant(plant) {
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      const existingIndex = garden.plants.findIndex(item => item.id === plant.id);
+      if (existingIndex < 0) throw new Error("这株植物还没有保存在本地花园里");
+      garden.plants.splice(existingIndex, 1, clone(plant));
+      writeGuestGarden(garden);
+      return clone(plant);
+    }
     if (window.HHCloud.demo) return clone(plant);
     currentOwnerId();
     const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
@@ -172,6 +243,15 @@
   }
 
   async function addDiaryEntry(plantId, entry) {
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      const plant = garden.plants.find(item => item.id === plantId);
+      if (!plant) throw new Error("这株植物还没有保存在本地花园里");
+      plant.diary = Array.isArray(plant.diary) ? plant.diary : [];
+      plant.diary.unshift(clone(entry));
+      writeGuestGarden(garden);
+      return clone(entry);
+    }
     if (window.HHCloud.demo) return clone(entry);
     const uid = currentOwnerId();
     const now = new Date().toISOString();
@@ -191,6 +271,7 @@
 
   window.HHData = {
     TABLES,
+    GUEST_STORAGE_KEY,
     bootstrap,
     setOnboarded,
     createPlantWithFirstEntry,
