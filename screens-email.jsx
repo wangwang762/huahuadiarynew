@@ -2,28 +2,17 @@
    花花日记本 MVP · standard email OTP
    Two steps revealed behind a one-time field-journal cover.
    ============================================================ */
-function CollageJournalScene({ settled = false }) {
+function MinimalJournalScene({ settled = false }) {
   return (
     <div className={`collage-login-stage${settled ? " is-settled" : ""}`} aria-hidden="true">
       <div className="collage-corkboard"></div>
       <div className="collage-field-sheet-back"></div>
       <div className="collage-field-sheet">
-        <div className="collage-brass-clip collage-sheet-clip"><span></span></div>
-        <figure className="collage-polaroid collage-polaroid-left">
+        <figure className="collage-polaroid minimal-journal-photo">
           <div><img src="assets/plants/final-v1/guibeizhu.png" alt="" /></div>
           <figcaption>MONSTERA · 03</figcaption>
         </figure>
-        <figure className="collage-polaroid collage-polaroid-right">
-          <div><img src="assets/plants/final-v1/hudielan.png" alt="" /></div>
-          <figcaption>ORCHID · 11</figcaption>
-        </figure>
-        <span className="collage-stamp">HUĀHUĀ<br />FIELD NOTES</span>
-        <span className="collage-tape collage-tape-blue"></span>
-        <span className="collage-tape collage-tape-pink"></span>
-        <span className="collage-pin collage-pin-coral"></span>
-        <span className="collage-pin collage-pin-green"></span>
-        <span className="collage-doodle collage-doodle-star">✦</span>
-        <span className="collage-doodle collage-doodle-leaf">⌇</span>
+        <span className="collage-tape minimal-journal-tape"></span>
       </div>
 
       <div className="collage-cover collage-cover-left">
@@ -36,7 +25,6 @@ function CollageJournalScene({ settled = false }) {
       </div>
       <div className="collage-cover collage-cover-right">
         <span className="collage-cover-edge"></span>
-        <div className="collage-brass-clip collage-cover-clip"><span></span></div>
         <span className="collage-cover-label">NO. 0826</span>
         <span className="collage-cover-flower">✿</span>
       </div>
@@ -44,7 +32,7 @@ function CollageJournalScene({ settled = false }) {
   );
 }
 
-function EmailEntry({ onEnter }) {
+function EmailEntry({ onEnter, onSkip }) {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -120,9 +108,21 @@ function EmailEntry({ onEnter }) {
     setError("");
   }
 
+  async function skipLogin() {
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      await onSkip();
+    } catch (err) {
+      setError(err && err.message ? err.message : "本地花园没有打开，请再试一次");
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="collage-login-page soft-fade">
-      <CollageJournalScene settled={step === "code"} />
+      <MinimalJournalScene settled={step === "code"} />
       <main className="collage-login-form collage-form-reveal">
         <div className="collage-form-meta">
           <span>HUĀHUĀ FIELD NOTES</span>
@@ -136,7 +136,7 @@ function EmailEntry({ onEnter }) {
             </div>
 
             <form onSubmit={sendCode} noValidate className="collage-login-fields">
-              <label htmlFor="mvp-email" className="collage-field-label">邮箱地址</label>
+              <label htmlFor="mvp-email" className="collage-field-label">邮箱</label>
               <div className={`collage-email-note${error ? " has-error" : valid ? " is-valid" : ""}`}>
                 <Icon name="mail" size={19} color={error ? "var(--coral)" : "var(--green)"}
                   style={{ pointerEvents: "none" }} />
@@ -150,6 +150,10 @@ function EmailEntry({ onEnter }) {
               <button type="submit" disabled={busy} className="collage-paper-button" style={{ opacity: busy ? .7 : 1 }}>
                 {busy ? "正在发送…" : "获取验证码"}
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
+              </button>
+              <button type="button" className="collage-guest-skip" onClick={skipLogin} disabled={busy}>
+                跳过登录，先添加植物
+                <Icon name="arrowR" size={15} color="currentColor" />
               </button>
             </form>
           </div>
