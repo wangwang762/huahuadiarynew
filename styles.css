@@ -636,12 +636,6 @@ input, textarea { font-family: inherit; }
   letter-spacing: -.7px;
   color: #24291F;
 }
-.collage-login-helper {
-  margin: 7px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #747166;
-}
 .collage-login-fields { margin-top: 0; }
 .collage-field-label {
   display: block;
@@ -785,7 +779,6 @@ input, textarea { font-family: inherit; }
   .collage-login-form { top: 205px; }
   .collage-form-meta { top: -137px; }
   .collage-login-heading { margin-bottom: 12px; }
-  .collage-login-helper { margin-top: 4px; }
   .collage-cover-copy { top: 164px; }
   .collage-cover-label { top: 422px; }
 }

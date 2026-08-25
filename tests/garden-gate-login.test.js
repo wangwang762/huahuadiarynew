@@ -16,9 +16,8 @@ for (const marker of [
   "collage-otp-stamp",
   "assets/plants/final-v1/guibeizhu.png",
   "登录花花日记本",
-  "用邮箱保存并找回你的花园",
   "输入邮箱验证码",
-  "跳过登录，先添加植物",
+  "跳过登录",
   "onSkip",
 ]) {
   if (!screen.includes(marker)) throw new Error(`missing garden login marker: ${marker}`);
@@ -56,7 +55,7 @@ for (const rejectedV1 of ["garden-landscape", "gardenHillBack", "garden-stem-swa
   if (screen.includes(rejectedV1) || styles.includes(rejectedV1)) throw new Error(`rejected V1 marker remains: ${rejectedV1}`);
 }
 
-for (const oldCopy of ["HUĀHUĀ · MVP", "初次见面", "给你的花园", "短短信笺", "留个地址吧"]) {
+for (const oldCopy of ["HUĀHUĀ · MVP", "初次见面", "给你的花园", "短短信笺", "留个地址吧", "用邮箱保存并找回你的花园", "跳过登录，先添加植物"]) {
   if (screen.includes(oldCopy)) throw new Error(`old login content remains: ${oldCopy}`);
 }
 

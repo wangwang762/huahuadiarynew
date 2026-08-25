@@ -132,7 +132,6 @@ function EmailEntry({ onEnter, onSkip }) {
           <div className="soft-fade">
             <div className="collage-login-heading">
               <div className="collage-login-title">登录花花日记本</div>
-              <p className="serif collage-login-helper">用邮箱保存并找回你的花园</p>
             </div>
 
             <form onSubmit={sendCode} noValidate className="collage-login-fields">
@@ -152,8 +151,7 @@ function EmailEntry({ onEnter, onSkip }) {
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
               </button>
               <button type="button" className="collage-guest-skip" onClick={skipLogin} disabled={busy}>
-                跳过登录，先添加植物
-                <Icon name="arrowR" size={15} color="currentColor" />
+                跳过登录
               </button>
             </form>
           </div>

@@ -52,11 +52,11 @@ const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-jo
 
     assert.equal(await page.locator(".collage-field-sheet figure img").count(), 1, "登录页应只有一张植物照片");
     assert.equal(await page.locator(".collage-pin, .collage-brass-clip, .collage-stamp, .collage-doodle").count(), 0, "登录页仍有多余拼贴装饰");
-    assert.equal(await page.getByRole("button", { name: "跳过登录，先添加植物" }).isVisible(), true, "跳过入口不可见");
+    assert.equal(await page.getByRole("button", { name: "跳过登录", exact: true }).isVisible(), true, "跳过入口不可见");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false, "页面出现横向溢出");
     await page.screenshot({ path: screenshotPath, fullPage: true });
 
-    await page.getByRole("button", { name: "跳过登录，先添加植物" }).click();
+    await page.getByRole("button", { name: "跳过登录", exact: true }).click();
     await page.getByText("添加第一盆植物", { exact: true }).waitFor();
     await page.getByRole("button", { name: "添加第一盆植物" }).click();
     await page.getByText("选择植物品类", { exact: true }).waitFor();
@@ -69,7 +69,7 @@ const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-jo
     });
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByText("登录花花日记本", { exact: true }).waitFor({ timeout: 20_000 });
-    await page.getByRole("button", { name: "跳过登录，先添加植物" }).click();
+    await page.getByRole("button", { name: "跳过登录", exact: true }).click();
     await page.getByText("添加第一盆植物", { exact: true }).waitFor();
     const restoredName = await page.evaluate(() => window.PLANTS && window.PLANTS[0] && window.PLANTS[0].name);
     assert.equal(restoredName, "窗边薄荷", "刷新后没有恢复游客植物");
