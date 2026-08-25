@@ -7,6 +7,14 @@ const email = fs.readFileSync("screens-email.jsx", "utf8");
 for (const marker of ["restoreSession", "HHData.bootstrap", "花园暂时没有连上", "再试一次", "GardenBootScreen"]) {
   if (!app.includes(marker)) throw new Error(`missing CloudBase boot marker: ${marker}`);
 }
+for (const marker of [
+  "enterGuestGarden",
+  "guest: true",
+  '<EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />',
+  'setStack([{ view: "onboard" }])',
+]) {
+  if (!app.includes(marker)) throw new Error(`missing guest entry marker: ${marker}`);
+}
 for (const marker of ["createPlantWithFirstEntry", "await window.HHData", "addDiaryEntry", "updatePlant"]) {
   if (!app.includes(marker)) throw new Error(`missing awaited data-flow marker: ${marker}`);
 }
