@@ -468,6 +468,63 @@ input, textarea { font-family: inherit; }
   --drop-rotate: -3deg;
   animation-delay: 1.12s;
 }
+.journal-botanical-sticker {
+  position: absolute;
+  z-index: 3;
+  left: 24px;
+  top: 112px;
+  width: 112px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px 7px 12px;
+  border: 1px solid rgba(116,66,58,.16);
+  background: rgba(205,139,128,.72);
+  box-shadow: 0 5px 10px rgba(71,48,36,.1);
+  color: #5C493F;
+  --drop-rotate: -2.5deg;
+  opacity: 0;
+  transform: rotate(var(--drop-rotate));
+  animation: collageStickerDrop .42s ease 1.14s forwards;
+}
+.journal-botanical-sticker svg {
+  width: 34px;
+  height: 43px;
+  flex: 0 0 auto;
+  stroke: #496253;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.journal-sticker-copy {
+  max-width: 42px;
+  font-family: var(--f-num);
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1.45;
+  letter-spacing: .9px;
+}
+.journal-sticker-pin {
+  position: absolute;
+  top: -5px;
+  left: 15px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #A95342;
+  box-shadow: inset -2px -2px 2px rgba(76,34,28,.2), 0 3px 5px rgba(63,37,29,.22);
+}
+.journal-sticker-pin::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 3px;
+  height: 6px;
+  background: rgba(74,52,41,.38);
+  clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%);
+}
 .collage-tape-blue { left: 81px; top: 25px; background: rgba(145,168,189,.62); transform: rotate(-9deg); animation-delay: 1.11s; }
 .collage-tape-pink { right: 44px; top: 142px; background: rgba(217,138,130,.54); transform: rotate(11deg); animation-delay: 1.18s; }
 .collage-pin {
@@ -602,7 +659,7 @@ input, textarea { font-family: inherit; }
 .collage-login-form {
   position: absolute;
   z-index: 8;
-  top: 258px;
+  top: 276px;
   left: 48px;
   right: 46px;
   color: var(--ink);
@@ -776,8 +833,9 @@ input, textarea { font-family: inherit; }
   .collage-polaroid > div { height: 68px; }
   .minimal-journal-photo { top: 58px; }
   .minimal-journal-tape { top: 52px; right: 40px; }
-  .collage-login-form { top: 205px; }
-  .collage-form-meta { top: -137px; }
+  .journal-botanical-sticker { top: 92px; transform: scale(.88) rotate(-2.5deg); transform-origin: left top; }
+  .collage-login-form { top: 222px; }
+  .collage-form-meta { top: -154px; }
   .collage-login-heading { margin-bottom: 12px; }
   .collage-cover-copy { top: 164px; }
   .collage-cover-label { top: 422px; }
@@ -788,6 +846,7 @@ input, textarea { font-family: inherit; }
   .collage-field-sheet,
   .collage-polaroid,
   .collage-tape,
+  .journal-botanical-sticker,
   .collage-login-form {
     opacity: 1;
     transform: none;
