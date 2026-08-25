@@ -107,10 +107,6 @@ function ObWelcome({ sp, onNext, onSkip }) {
       <div style={{ fontFamily: "var(--f-journal)", fontSize: 27, fontWeight: 600, color: "var(--ink)", marginTop: 6, lineHeight: 1.4 }}>
         还空着一页，<br />等一盆花住进来
       </div>
-      <div className="serif" style={{ fontSize: 15.5, color: "var(--ink-soft)", marginTop: 16, lineHeight: 1.7, maxWidth: 270 }}>
-        从头像库里选出它的品类，<br />让它的灵魂，住进这本日记里。
-      </div>
-
       <button onClick={onNext} className="btn-green" style={{ marginTop: 36, width: "100%", maxWidth: 300, height: 56,
         display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 17 }}>
         <Icon name="leaf" size={22} color="#fff" /> 添加第一盆植物
