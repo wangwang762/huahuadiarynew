@@ -12,8 +12,7 @@ for (const marker of [
   "collage-field-sheet",
   "minimal-journal-photo",
   "collage-tape",
-  "journal-botanical-sticker",
-  "journal-sticker-pin",
+  "journal-round-stamp",
   "GROW SLOWLY",
   "collage-email-note",
   "collage-otp-stamp",
@@ -46,6 +45,8 @@ for (const removedDecoration of [
   "collage-stamp",
   "collage-doodle",
   "assets/plants/final-v1/hudielan.png",
+  "journal-botanical-sticker",
+  "journal-sticker-pin",
 ]) {
   if (screen.includes(removedDecoration)) throw new Error(`extra login decoration remains: ${removedDecoration}`);
 }

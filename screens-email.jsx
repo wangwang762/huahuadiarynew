@@ -8,15 +8,14 @@ function MinimalJournalScene({ settled = false }) {
       <div className="collage-corkboard"></div>
       <div className="collage-field-sheet-back"></div>
       <div className="collage-field-sheet">
-        <div className="journal-botanical-sticker" aria-hidden="true">
-          <span className="journal-sticker-pin"></span>
+        <div className="journal-round-stamp" aria-hidden="true">
           <svg viewBox="0 0 38 48" fill="none">
             <path d="M20 43C20 31 19 20 16 8" />
             <path d="M17 17C10 16 7 12 6 7C12 7 16 10 17 17Z" />
             <path d="M19 25C27 23 31 19 32 13C25 13 20 17 19 25Z" />
             <path d="M19 34C12 33 8 29 7 24C13 24 18 27 19 34Z" />
           </svg>
-          <span className="journal-sticker-copy">GROW SLOWLY</span>
+          <span>GROW SLOWLY</span>
         </div>
         <figure className="collage-polaroid minimal-journal-photo">
           <div><img src="assets/plants/final-v1/guibeizhu.png" alt="" /></div>
