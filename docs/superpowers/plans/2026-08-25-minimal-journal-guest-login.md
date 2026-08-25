@@ -164,7 +164,7 @@ git add scripts/test-guest-login-browser.cjs
 git commit -m "test: cover guest login in browser"
 ```
 
-### Task 5: Balance the journal header with one botanical sticker
+### Task 5: Balance the journal header with one botanical stamp
 
 **Files:**
 - Modify: `screens-email.jsx`
@@ -174,15 +174,15 @@ git commit -m "test: cover guest login in browser"
 
 **Interfaces:**
 - Consumes: the existing minimal one-photo journal scene
-- Produces: `.journal-botanical-sticker` and `.journal-sticker-pin` as the only additional decorative group
+- Produces: `.journal-round-stamp` as the only additional decorative group
 
 - [ ] **Step 1: Extend the login visual contract**
 
-Require one `journal-botanical-sticker`, one `journal-sticker-pin`, and the `GROW SLOWLY` label while continuing to reject the former generic collage pin and multi-decoration hooks.
+Require one `journal-round-stamp` and the `GROW SLOWLY` label while continuing to reject card backgrounds, pins, and the former multi-decoration hooks.
 
 - [ ] **Step 2: Add the botanical sticker markup and styling**
 
-Render a compact CSS/SVG botanical label in the upper-left blank area, use a muted coral paper color and dark red pin, and keep it behind the login form. Move `.collage-login-form` down by approximately 18px without changing the OTP or guest behavior.
+Render a compact transparent CSS/SVG botanical stamp in the upper-left blank area, using a muted coral ink ring with no fill or pin, and keep it behind the login form. Move `.collage-login-form` down by approximately 18px without changing the OTP or guest behavior.
 
 - [ ] **Step 3: Bump the affected cache keys and verify**
 
