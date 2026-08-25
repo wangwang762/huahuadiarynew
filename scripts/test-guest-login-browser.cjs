@@ -4,6 +4,11 @@ const fs = require("fs");
 
 const baseUrl = process.env.HH_TEST_URL || "http://127.0.0.1:4190/花花日记本.html?v=guest-login-test";
 const accountSource = fs.readFileSync("account-service.js", "utf8");
+const localVendor = {
+  "react.development.js": fs.readFileSync("vendor/react.development.js", "utf8"),
+  "react-dom.development.js": fs.readFileSync("vendor/react-dom.development.js", "utf8"),
+  "babel.min.js": fs.readFileSync("vendor/babel.min.js", "utf8"),
+};
 const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-journal-login.png";
 
 (async () => {
@@ -26,6 +31,18 @@ const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-jo
     status: 200,
     contentType: "text/javascript",
     body: `${accountSource}\nwindow.HHAccount.restoreSession = async () => null;`,
+  }));
+  await page.route(/unpkg\.com\/react@.*\/react\.development\.js/, route => route.fulfill({
+    status: 200, contentType: "text/javascript", body: localVendor["react.development.js"],
+  }));
+  await page.route(/unpkg\.com\/react-dom@.*\/react-dom\.development\.js/, route => route.fulfill({
+    status: 200, contentType: "text/javascript", body: localVendor["react-dom.development.js"],
+  }));
+  await page.route(/unpkg\.com\/@babel\/standalone@.*\/babel\.min\.js/, route => route.fulfill({
+    status: 200, contentType: "text/javascript", body: localVendor["babel.min.js"],
+  }));
+  await page.route(/static\.cloudbase\.net\/cloudbase-js-sdk/, route => route.fulfill({
+    status: 200, contentType: "text/javascript", body: "window.cloudbase = {};",
   }));
 
   try {

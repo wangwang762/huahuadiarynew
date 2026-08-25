@@ -189,8 +189,6 @@ function EmailEntry({ onEnter, onSkip }) {
             </div>
           </div>
         )}
-
-        <div className="collage-login-privacy">验证码仅用于登录，不会发送营销邮件</div>
       </main>
     </div>
   );

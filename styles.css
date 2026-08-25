@@ -422,7 +422,7 @@ input, textarea { font-family: inherit; }
 }
 .minimal-journal-photo {
   right: 17px;
-  top: 30px;
+  top: 66px;
   --drop-rotate: 3deg;
   animation-delay: 1.08s;
 }
@@ -463,7 +463,7 @@ input, textarea { font-family: inherit; }
 }
 .minimal-journal-tape {
   right: 48px;
-  top: 23px;
+  top: 59px;
   background: rgba(145,168,189,.48);
   --drop-rotate: -3deg;
   animation-delay: 1.12s;
@@ -602,7 +602,7 @@ input, textarea { font-family: inherit; }
 .collage-login-form {
   position: absolute;
   z-index: 8;
-  top: 250px;
+  top: 258px;
   left: 48px;
   right: 46px;
   color: var(--ink);
@@ -611,10 +611,14 @@ input, textarea { font-family: inherit; }
 }
 .collage-form-reveal { animation: collageFormPrint .48s ease 1.34s forwards; }
 .collage-form-meta {
+  position: absolute;
+  top: -164px;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 19px;
+  margin: 0;
   padding-bottom: 8px;
   border-bottom: 1px dashed rgba(59,76,59,.35);
   font-family: var(--f-num);
@@ -743,13 +747,6 @@ input, textarea { font-family: inherit; }
   border-color: rgba(157,62,44,.62);
   background: rgba(217,138,130,.15);
 }
-.collage-login-privacy {
-  margin-top: 12px;
-  text-align: center;
-  font-size: 10.5px;
-  color: #827E72;
-}
-
 @keyframes collageCoverLeftOpen {
   0%, 8% { transform: rotateY(0) translateX(0); opacity: 1; }
   82% { opacity: 1; }
@@ -783,13 +780,12 @@ input, textarea { font-family: inherit; }
   .collage-field-sheet { top: 48px; bottom: 16px; }
   .collage-polaroid { width: 88px; }
   .collage-polaroid > div { height: 68px; }
-  .minimal-journal-photo { top: 24px; }
-  .minimal-journal-tape { top: 18px; right: 40px; }
+  .minimal-journal-photo { top: 58px; }
+  .minimal-journal-tape { top: 52px; right: 40px; }
   .collage-login-form { top: 205px; }
-  .collage-form-meta { margin-bottom: 12px; }
+  .collage-form-meta { top: -137px; }
   .collage-login-heading { margin-bottom: 12px; }
   .collage-login-helper { margin-top: 4px; }
-  .collage-login-privacy { margin-top: 8px; }
   .collage-cover-copy { top: 164px; }
   .collage-cover-label { top: 422px; }
 }
