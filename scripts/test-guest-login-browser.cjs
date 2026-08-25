@@ -11,6 +11,8 @@ const localVendor = {
 };
 const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-journal-login.png";
 const pickerScreenshotPath = process.env.HH_PICKER_SCREENSHOT_PATH || "/tmp/huahua-species-picker-empty.png";
+const nameScreenshotPath = process.env.HH_NAME_SCREENSHOT_PATH || "/tmp/huahua-onboard-name-theme.png";
+const revealScreenshotPath = process.env.HH_REVEAL_SCREENSHOT_PATH || "/tmp/huahua-onboard-reveal.png";
 
 (async () => {
   const browser = await chromium.launch({
@@ -70,6 +72,37 @@ const pickerScreenshotPath = process.env.HH_PICKER_SCREENSHOT_PATH || "/tmp/huah
     const selectedButtonBackground = await nextButton.evaluate(element => getComputedStyle(element).backgroundImage);
     assert.equal(selectedButtonBackground.includes("53, 115, 85") || selectedButtonBackground.includes("35, 75, 54"), true,
       "下一步按钮应保持主题绿色");
+    await nextButton.click();
+    await page.getByText("给它起个名字吧", { exact: true }).waitFor();
+    const selectedTrait = page.locator("button.badge").first();
+    const selectedTraitBackground = await selectedTrait.evaluate(element => getComputedStyle(element).backgroundImage);
+    assert.equal(selectedTraitBackground.includes("53, 115, 85") || selectedTraitBackground.includes("35, 75, 54"), true,
+      "性格标签选中态应保持主题绿色");
+    const awakenButton = page.getByRole("button", { name: "让它活过来" });
+    const awakenButtonBackground = await awakenButton.evaluate(element => getComputedStyle(element).backgroundImage);
+    assert.equal(awakenButtonBackground.includes("53, 115, 85") || awakenButtonBackground.includes("35, 75, 54"), true,
+      "生成按钮应保持主题绿色");
+    await page.screenshot({ path: nameScreenshotPath, fullPage: true });
+
+    await awakenButton.click();
+    await page.getByText("住进来了", { exact: false }).waitFor({ timeout: 8_000 });
+    const revealSlot = page.locator('image-slot[id^="reveal-"]');
+    await revealSlot.waitFor();
+    const revealImage = await revealSlot.evaluate(element => {
+      const image = element.shadowRoot && element.shadowRoot.querySelector('.frame img');
+      return {
+        source: element.getAttribute("src"),
+        loaded: Boolean(image && image.complete && image.naturalWidth > 0),
+        visible: Boolean(image && getComputedStyle(image).display !== "none"),
+      };
+    });
+    assert.equal(revealImage.loaded, true, `欢迎卡片植物切图未加载：${revealImage.source}`);
+    assert.equal(revealImage.visible, true, "欢迎卡片植物切图仍处于隐藏状态");
+    const finalButton = page.getByRole("button", { name: "打开我们的日记本" });
+    const finalButtonBackground = await finalButton.evaluate(element => getComputedStyle(element).backgroundImage);
+    assert.equal(finalButtonBackground.includes("53, 115, 85") || finalButtonBackground.includes("35, 75, 54"), true,
+      "最终主按钮应保持主题绿色");
+    await page.screenshot({ path: revealScreenshotPath, fullPage: true });
 
     await page.evaluate(() => {
       localStorage.setItem("huahua.guestGarden.v1", JSON.stringify({

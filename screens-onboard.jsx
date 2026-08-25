@@ -188,7 +188,7 @@ function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
 
       <input value={name} onChange={e => setName(e.target.value)} maxLength={8}
         placeholder="比如「小刺」"
-        style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 56, borderRadius: 16, border: `1.5px solid ${sp.accent}40`,
+        style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 56, borderRadius: 16, border: "1.5px solid rgba(30,70,50,.18)",
           background: "var(--glass-strong)", textAlign: "center", fontSize: 20, fontFamily: "var(--f-journal)",
           color: "var(--ink)", outline: "none", boxShadow: "var(--sh-1)" }} />
 
@@ -205,9 +205,9 @@ function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
             return (
               <button key={t} onClick={() => toggleTrait(t)} className="badge"
                 style={{ fontSize: 14, padding: "9px 15px",
-                  background: on ? `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` : "rgba(58,53,46,0.05)",
+                  background: on ? "var(--green-grad)" : "rgba(58,53,46,0.05)",
                   color: on ? "#fff" : "var(--ink-faint)", border: on ? "none" : "1px dashed var(--hairline)",
-                  boxShadow: on ? `0 5px 12px ${sp.accent}33` : "none" }}>
+                  boxShadow: on ? "0 5px 12px rgba(30,70,50,.18)" : "none" }}>
                 {on && <Icon name="check" size={13} color="#fff" />}{t}
               </button>
             );
@@ -217,8 +217,7 @@ function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
 
       <button onClick={onNext} disabled={traits.length < 1} className="btn-green"
         style={{ marginTop: 32, width: "100%", maxWidth: 300, height: 56, fontSize: 17, opacity: traits.length < 1 ? 0.5 : 1,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` }}>
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         <Icon name="leaf" size={20} color="#fff" /> 让它活过来
       </button>
     </div>
@@ -342,15 +341,19 @@ function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
             <div className="sig" style={{ fontSize: 28, lineHeight: 1 }}>{name.trim() || "它"}</div>
           </div>
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--hairline)", display: "flex", gap: 7, flexWrap: "wrap" }}>
-            <span className="badge" style={{ background: sp.bubble, color: sp.deep }}>{sp.species}</span>
+            <span className="badge" style={{ background: "var(--green-soft)", color: "var(--green-deep)" }}>{sp.species}</span>
             <span className="badge" style={{ background: "rgba(58,53,46,0.05)", color: "var(--ink-soft)" }}>第一篇日记</span>
           </div>
 
           <div className="snap" style={{ position: "absolute", top: -20, right: -8, width: 92, transform: "rotate(7deg)" }}>
             <div style={{ width: 80, height: 96, borderRadius: 4, overflow: "hidden", background: sp.soft,
               display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-              <img src={window.photoFor(sp.photoId)} alt={sp.species}
-                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center bottom", display: "block" }} />
+              <image-slot id={`reveal-${sp.photoId}`} shape="rounded" radius="2" transparent-frame=""
+                src={window.cutFor ? window.cutFor(sp.photoId) : window.photoFor(sp.photoId)} fit="contain" position="50% 100%"
+                style={{ width: "100%", height: "100%", display: "block", position: "relative",
+                  top: window.coverOffsetY ? window.coverOffsetY(sp.photoId) : 0,
+                  transform: `scale(${window.coverScale ? window.coverScale(sp.photoId) : 1})`, transformOrigin: "bottom center" }}
+                placeholder=" "></image-slot>
             </div>
           </div>
         </div>
@@ -359,7 +362,7 @@ function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
       {saveError && <div role="alert" style={{ marginTop: 18, maxWidth: 300, fontSize: 12.5, lineHeight: 1.5, color: "var(--coral)", textAlign: "center" }}>{saveError}</div>}
       <button onClick={onDone} disabled={saving} className="btn-green" style={{ marginTop: saveError ? 14 : 34, width: "100%", maxWidth: 300, height: 56, fontSize: 17,
         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        opacity: saving ? .68 : 1, background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` }}>
+        opacity: saving ? .68 : 1 }}>
         <Icon name="book" size={20} color="#fff" /> {saving ? "正在收进日记本……" : saveError ? "再试一次" : "打开我们的日记本"}
       </button>
     </div>

@@ -45,4 +45,31 @@ if (picker.includes("PlantAvatar")) throw new Error("picker must not use circula
 if (picker.includes("${sp.accent}, ${sp.deep}")) throw new Error("picker action button must not follow selected species colors");
 if (!onboarding.includes("useState(null)")) throw new Error("species picker must start without a default selection");
 
+const nameStart = onboarding.indexOf("function ObName");
+const nameEnd = onboarding.indexOf("/* ---------- 4", nameStart);
+const nameStep = onboarding.slice(nameStart, nameEnd);
+if (!nameStep.includes('background: on ? "var(--green-grad)"')) {
+  throw new Error("selected personality tags must use the fixed diary theme color");
+}
+if (nameStep.includes("${sp.accent}") || nameStep.includes("${sp.deep}")) {
+  throw new Error("name step controls must not inherit the selected species color");
+}
+
+const revealStart = onboarding.indexOf("function ObReveal");
+const revealStep = onboarding.slice(revealStart);
+for (const required of [
+  "image-slot",
+  "window.cutFor ? window.cutFor(sp.photoId) : window.photoFor(sp.photoId)",
+  'background: "var(--green-soft)"',
+  'color: "var(--green-deep)"',
+]) {
+  if (!revealStep.includes(required)) throw new Error(`missing fixed-theme reveal marker: ${required}`);
+}
+if (revealStep.includes('<img src={window.photoFor(sp.photoId)}')) {
+  throw new Error("reveal must reuse the verified species cutout instead of the legacy photo path");
+}
+if (revealStep.includes("${sp.accent}, ${sp.deep}")) {
+  throw new Error("reveal action button must not follow selected species colors");
+}
+
 console.log("SPECIES_LIBRARY_OK");
