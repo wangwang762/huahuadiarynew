@@ -92,6 +92,22 @@ function normalizeRecognition(value, candidates) {
   };
 }
 
+function normalizeTriage(value) {
+  const health = ["good", "watch", "sick"].includes(value.health) ? value.health : "watch";
+  const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
+  const route = routeByHealth[health];
+  return {
+    health,
+    observations: Array.isArray(value.observations)
+      ? value.observations.slice(0, 4).map(item => String(item).slice(0, 90)).filter(Boolean)
+      : [],
+    likelyCause: String(value.likely_cause || "暂时无法判断原因").slice(0, 160),
+    trend: ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown",
+    route,
+    confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
+  };
+}
+
 function safeImage(image) {
   if (!image) return "";
   const value = String(image);
@@ -222,6 +238,20 @@ async function execute(payload) {
     ], 360);
     return { ok: true, recognition: normalizeRecognition(parseJson(raw), candidates), model: MODEL };
   }
+  if (action === "triage") {
+    if (!image) {
+      return { ok: true, triage: normalizeTriage({
+        health: "watch", observations: ["没有收到清晰照片"], likely_cause: "照片信息不足",
+        trend: "unknown", route: "soft_hint", confidence: 0,
+      }), model: MODEL };
+    }
+    const prompt = `健康分诊路由。${plantText(plant)}只根据照片里确实可见的叶片、茎干、土壤和整体状态判断，不要因为植物档案原状态良好就默认健康。黄斑、焦枯、萎蔫、卷边、黑斑或大面积变色必须进入watch或sick，不能返回good。只输出JSON：{"health":"good|watch|sick","observations":["可见现象"],"likely_cause":"最可能原因；不确定要说明","trend":"better|same|worse|unknown","route":"record|soft_hint|diagnose","confidence":0.0}。明显异常使用sick+diagnose，轻微异常使用watch+soft_hint，只有没有明显异常才用good+record。`;
+    const raw = await generate([
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] },
+    ], 480);
+    return { ok: true, triage: normalizeTriage(parseJson(raw)), model: MODEL };
+  }
   if (action === "chat") {
     return { ok: true, reply: await generate(conversation, 700), model: MODEL };
   }
@@ -264,4 +294,4 @@ exports.handler = function handler(rawEvent, context, callback) {
   return task;
 };
 
-exports._test = { eventObject, requestBody, safeImage, safeMessages, safeCandidates, normalizeRecognition, normalizeSummary, handle };
+exports._test = { eventObject, requestBody, safeImage, safeMessages, safeCandidates, normalizeRecognition, normalizeTriage, normalizeSummary, handle };

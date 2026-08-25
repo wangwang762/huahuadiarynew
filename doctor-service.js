@@ -120,5 +120,27 @@
     };
   }
 
-  window.HHDoctor = { reply, summarize, recognize };
+  function normalizeTriage(raw) {
+    const value = raw || {};
+    const health = ["good", "watch", "sick"].includes(value.health) ? value.health : "watch";
+    const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
+    return {
+      health,
+      observations: Array.isArray(value.observations) ? value.observations.slice(0, 4).map(String).filter(Boolean) : [],
+      likelyCause: String(value.likelyCause || value.likely_cause || "暂时无法判断原因"),
+      trend: ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown",
+      route: routeByHealth[health],
+      confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
+    };
+  }
+
+  async function triage({ plant, image }) {
+    const result = await invoke("triage", {
+      plant: plantContext(plant),
+      image: image || "",
+    });
+    return normalizeTriage(result.triage);
+  }
+
+  window.HHDoctor = { reply, summarize, recognize, triage };
 })();

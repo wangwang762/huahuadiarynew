@@ -17,12 +17,27 @@ global.fetch = async (url, options) => {
       part && part.type === "text" && String(part.text || "").includes("植物识别路由")
     ))
   );
+  const wantsTriage = body.messages.some(message =>
+    (typeof message.content === "string" && message.content.includes("健康分诊路由"))
+    || (Array.isArray(message.content) && message.content.some(part =>
+      part && part.type === "text" && String(part.text || "").includes("健康分诊路由")
+    ))
+  );
   return {
     ok: true,
     json: async () => ({
       choices: [{
         message: {
-          content: wantsRecognition
+          content: wantsTriage
+            ? JSON.stringify({
+                health: "sick",
+                observations: ["多片叶面有大面积黄褐斑", "叶尖焦枯"],
+                likely_cause: "可能存在积水或叶片病害",
+                trend: "unknown",
+                route: "diagnose",
+                confidence: 0.91,
+              })
+            : wantsRecognition
             ? JSON.stringify({
                 species: "绿萝",
                 confidence: 0.88,
@@ -99,6 +114,18 @@ function event(method, payload, origin = "https://huahua.example") {
   assert.equal(recognitionBody.recognition.species, "绿萝");
   assert.deepEqual(recognitionBody.recognition.matchedIds, ["p1"]);
   assert.equal(recognitionBody.recognition.confidence, 0.88);
+
+  const triageResponse = await handler(event("POST", {
+    action: "triage",
+    image: "data:image/jpeg;base64,AA==",
+    plant: { id: "p3", name: "懒懒", species: "虎皮兰", days: 1 },
+  }));
+  const triageBody = JSON.parse(triageResponse.body);
+  assert.equal(triageBody.ok, true);
+  assert.equal(triageBody.triage.health, "sick");
+  assert.equal(triageBody.triage.route, "diagnose");
+  assert.deepEqual(triageBody.triage.observations, ["多片叶面有大面积黄褐斑", "叶尖焦枯"]);
+  assert.equal(triageBody.triage.confidence, 0.91);
 
   const rejected = await handler(event("POST", { action: "unknown" }));
   assert.equal(rejected.statusCode, 400);

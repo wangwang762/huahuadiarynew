@@ -12,7 +12,7 @@ const build = fs.readFileSync("scripts/build-cloudbase.mjs", "utf8");
 for (const marker of ["window.HHDoctorConfig", "fetch(endpoint", 'method: "POST"', "AbortController", "window.HHDoctor"]) {
   if (!client.includes(marker)) throw new Error(`missing doctor client marker: ${marker}`);
 }
-for (const marker of ["async function recognize", "action, ...payload", "matchedIds", "validIds.has(id)", "window.HHDoctor = { reply, summarize, recognize }"]) {
+for (const marker of ["async function recognize", "async function triage", "action, ...payload", "matchedIds", "validIds.has(id)", "window.HHDoctor = { reply, summarize, recognize, triage }"]) {
   if (!client.includes(marker)) throw new Error(`missing recognition client marker: ${marker}`);
 }
 if (client.includes("app.callFunction")) throw new Error("doctor client still calls CloudBase function");
@@ -71,6 +71,14 @@ async function verifyRecognitionClient() {
     clearTimeout,
     fetch: async (_endpoint, options) => {
       requestBody = JSON.parse(options.body);
+      if (requestBody.action === "triage") {
+        return {
+          json: async () => ({ ok: true, triage: {
+            health: "sick", observations: ["叶片大面积黄褐", "叶尖焦枯"],
+            likelyCause: "可能积水", trend: "unknown", route: "diagnose", confidence: 1.6,
+          } }),
+        };
+      }
       return {
         json: async () => ({
           ok: true,
@@ -116,6 +124,18 @@ async function verifyRecognitionClient() {
   });
   assert.equal(lowConfidence.confidence, 0.3);
   assert.deepEqual(Array.from(lowConfidence.matchedIds), []);
+
+  const triage = await window.HHDoctor.triage({
+    plant: { id: "p3", name: "懒懒", species: "虎皮兰", days: 1, diary: "不得发送" },
+    image: "data:image/jpeg;base64,DD==",
+  });
+  assert.equal(requestBody.action, "triage");
+  assert.equal(requestBody.plant.species, "虎皮兰");
+  assert.equal(Object.prototype.hasOwnProperty.call(requestBody.plant, "diary"), false);
+  assert.equal(triage.health, "sick");
+  assert.equal(triage.route, "diagnose");
+  assert.equal(triage.confidence, 1);
+  assert.deepEqual(Array.from(triage.observations), ["叶片大面积黄褐", "叶尖焦枯"]);
 }
 
 verifyRecognitionClient().then(() => {

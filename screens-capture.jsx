@@ -11,7 +11,8 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   const [recognitionError, setRecognitionError] = useState("");
   const [matchedPlants, setMatchedPlants] = useState([]);
   const [diagnosisPhoto, setDiagnosisPhoto] = useState("");
-  const needsDoctor = p.statusTone === "warn";
+  const [triageResult, setTriageResult] = useState(null);
+  const [triageError, setTriageError] = useState("");
 
   async function analyze() {
     setStep("analyzing");
@@ -51,32 +52,39 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
       }
       return;
     }
-    // (production: a vision model reads the photo — soil & leaves — to triage.)
-    let line = "";
-    if (!needsDoctor) {
-      try {
-        line = await window.claude.complete({ messages: [{
-          role: "user",
-          content: window.systemPromptFor(p) +
-            "\n\n主人刚刚给你拍了张照片，你今天状态很好、被认真记录着。用你的口吻说一句此刻的话（口语、1 句、可在括号里补一句真心话）。只输出这一句话。",
-        }] });
-      } catch (e) { line = p.voice; }
-      setVoice((line || p.voice).trim());
+    const image = await capturePhoto();
+    setDiagnosisPhoto(image);
+    setTriageError("");
+    try {
+      const triageResult = await window.HHDoctor.triage({ plant: p, image });
+      setTriageResult(triageResult);
+      setVoice(p.voice);
+      if (triageResult.route === "record") setTimeout(() => setStep("good"), 900);
+      if (triageResult.route === "soft_hint") setTimeout(() => setStep("abnormal"), 900);
+      if (triageResult.route === "diagnose") setTimeout(() => setStep("abnormal"), 900);
+    } catch (error) {
+      setTriageError(error && error.message ? error.message : "这次没有看清照片");
+      setTriageResult({
+        health: "watch", route: "soft_hint", observations: ["这次没有看清照片"],
+        likelyCause: "暂时无法判断状态", trend: "unknown", confidence: 0,
+      });
+      setTimeout(() => setStep("abnormal"), 650);
     }
-    setTimeout(() => setStep(needsDoctor ? "abnormal" : "good"), needsDoctor ? 1700 : 1900);
   }
 
   async function saveRecord(concern) {
+    const observations = triageResult && Array.isArray(triageResult.observations) ? triageResult.observations : [];
+    const concernText = observations.length ? observations.join("、") : "照片里有一些需要继续观察的变化";
     const entry = concern
       ? window.makeEntry("record", p, {
           mood: "留心", voice: p.voice,
-          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "花花说好像有点小状况" }, "，先记下了。"],
-          concern: "花花观测到叶片有点蔫、颜色偏暗，暂未诊断",
+          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "发现了一些需要留心的变化" }, "，先记下了。"],
+          concern: concernText,
           photo: p.photoId, stars: 3,
         })
       : window.makeEntry("record", p, {
           mood: p.mood, voice: voice || p.voice,
-          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "状态正好" }, "。"],
+          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "暂时没看到明显异常" }, "。"],
           photo: p.photoId,
         });
     setSaveError("");
@@ -91,6 +99,10 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   async function pickExisting(pp) {
     pp.diagnosisPhoto = diagnosisPhoto || await capturePhoto();
     go("doctorChat", pp);
+  }
+  function openDoctor() {
+    p.diagnosisPhoto = diagnosisPhoto;
+    go("doctorChat", p);
   }
   function startNewFriendDiagnosis(species, image, fromRecognitionFailure = false, errorMessage = "") {
     const cleanSpecies = String(species || "待识别").trim();
@@ -131,6 +143,11 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
       return source.startsWith("data:image/") || source.startsWith("https://") ? source : "";
     }
   }
+
+  const visibleObservations = triageResult && Array.isArray(triageResult.observations)
+    ? triageResult.observations.filter(Boolean)
+    : [];
+  const isSick = Boolean(triageResult && triageResult.route === "diagnose");
 
 
   return (
@@ -179,8 +196,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
             </p>
             <button onClick={analyze} className="btn-green"
               style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 54, fontSize: 16, display: "flex",
-                alignItems: "center", justifyContent: "center", gap: 9,
-                background: `linear-gradient(180deg, ${p.accent}, ${p.deep})`, boxShadow: `0 8px 20px ${p.accent}4d` }}>
+                alignItems: "center", justifyContent: "center", gap: 9 }}>
               <Icon name="leaf" size={20} color="#fff" /> {intake ? "让花花认认它" : "让花花看看"}
             </button>
           </div>
@@ -206,12 +222,12 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14 }}>
               <span style={{ width: 22, height: 22, borderRadius: "50%", background: p.accent, display: "flex",
                 alignItems: "center", justifyContent: "center" }}><Icon name="check" size={14} color="#fff" stroke={2.6} /></span>
-              <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: p.deep }}>状态不错，记一笔</span>
+              <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--green-deep)" }}>暂未看到明显异常</span>
             </div>
 
             <div className="glass-card" style={{ padding: "18px 18px 16px" }}>
               <div className="serif" style={{ fontSize: 16.5, color: "var(--ink)", lineHeight: 1.6 }}>
-                “今天给<em style={{ color: p.accent, fontStyle: "normal" }}>{p.name}</em>拍了张照，<em style={{ color: "var(--coral)", fontStyle: "normal" }}>状态正好</em>。”
+                “今天给<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>{p.name}</em>拍了张照，<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>暂时没看到明显异常</em>。”
               </div>
               <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <PlantAvatar plant={p} size={30} />
@@ -224,8 +240,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
 
             <button onClick={() => saveRecord(false)} className="btn-green"
               style={{ marginTop: 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 8, background: `linear-gradient(180deg, ${p.accent}, ${p.deep})`,
-                boxShadow: `0 8px 20px ${p.accent}4d` }}>
+                justifyContent: "center", gap: 8 }}>
               <Icon name="book" size={19} color="#fff" /> 存入日记
             </button>
             <button onClick={() => setStep("shoot")} style={{ marginTop: 12, width: "100%", fontSize: 14, color: "var(--ink-faint)" }}>重拍一张</button>
@@ -238,25 +253,29 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14 }}>
               <span style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--terra)", display: "flex",
                 alignItems: "center", justifyContent: "center" }}><Icon name="bell" size={13} color="#fff" /></span>
-              <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--terra)" }}>好像有点不对劲</span>
+              <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--terra)" }}>
+                {triageError ? "这次没有看清" : isSick ? "看起来不太舒服" : "发现一点需要留心的变化"}
+              </span>
             </div>
 
             <div className="glass-card" style={{ padding: "18px 18px 16px", border: "1px solid rgba(201,138,60,0.3)" }}>
               <div className="serif" style={{ fontSize: 15.5, color: "var(--ink)", lineHeight: 1.6 }}>
-                花花注意到 <em style={{ color: "var(--terra)", fontStyle: "normal" }}>{p.name}</em> 的叶片有点蔫、颜色偏暗，可能需要看看。要不要让<em style={{ color: p.deep, fontStyle: "normal" }}>花大夫</em>诊断一下？
+                {triageError
+                  ? <>花花没能可靠判断这张照片，<em style={{ color: "var(--terra)", fontStyle: "normal" }}>不会把它当成状态良好</em>。可以重拍，或直接让花大夫继续看看。</>
+                  : <>花花在 <em style={{ color: "var(--terra)", fontStyle: "normal" }}>{p.name}</em> 身上看到了{visibleObservations.length ? visibleObservations.join("、") : "一些异常变化"}。{triageResult && triageResult.likelyCause ? `可能是${triageResult.likelyCause}。` : ""}要不要让<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>花大夫</em>继续诊断？</>}
               </div>
               <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <PlantAvatar plant={p} size={30} />
                 <div style={{ background: p.bubble, borderRadius: 14, borderTopLeftRadius: 4, padding: "9px 13px",
                   fontFamily: "var(--f-journal)", fontSize: 14.5, color: "var(--ink)", border: `1px solid ${p.accent}22` }}>
-                  {p.voice}
+                  {isSick ? "我好像真的有点不舒服，陪我去问问花大夫吧。" : "有一点变化，先留心看看我吧。"}
                 </div>
               </div>
             </div>
 
-            <button onClick={() => go("doctorChat", p)} className="btn-green"
+            <button onClick={openDoctor} className="btn-green"
               style={{ marginTop: 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 8, background: "linear-gradient(180deg, #357355, #234B36)" }}>
+                justifyContent: "center", gap: 8 }}>
               <Icon name="doctor" size={20} color="#fff" /> 去问花大夫
             </button>
             <button onClick={() => saveRecord(true)} style={{ marginTop: 12, width: "100%", fontSize: 14, color: "var(--ink-faint)" }}>先不诊断，只记录一下</button>
