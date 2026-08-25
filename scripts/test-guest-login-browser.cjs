@@ -10,6 +10,7 @@ const localVendor = {
   "babel.min.js": fs.readFileSync("vendor/babel.min.js", "utf8"),
 };
 const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-journal-login.png";
+const pickerScreenshotPath = process.env.HH_PICKER_SCREENSHOT_PATH || "/tmp/huahua-species-picker-empty.png";
 
 (async () => {
   const browser = await chromium.launch({
@@ -60,6 +61,15 @@ const screenshotPath = process.env.HH_SCREENSHOT_PATH || "/tmp/huahua-minimal-jo
     await page.getByText("添加第一盆植物", { exact: true }).waitFor();
     await page.getByRole("button", { name: "添加第一盆植物" }).click();
     await page.getByText("选择植物品类", { exact: true }).waitFor();
+    const nextButton = page.getByRole("button", { name: "选好了，下一步" });
+    assert.equal(await page.locator('[data-picker-card="cover"][aria-pressed="true"]').count(), 0, "品类页不应默认选中植物");
+    assert.equal(await nextButton.isDisabled(), true, "未选择品类时下一步按钮应置灰禁用");
+    await page.screenshot({ path: pickerScreenshotPath, fullPage: true });
+    await page.getByRole("button", { name: "选择绿萝" }).click();
+    assert.equal(await nextButton.isEnabled(), true, "选择品类后下一步按钮应恢复可用");
+    const selectedButtonBackground = await nextButton.evaluate(element => getComputedStyle(element).backgroundImage);
+    assert.equal(selectedButtonBackground.includes("53, 115, 85") || selectedButtonBackground.includes("35, 75, 54"), true,
+      "下一步按钮应保持主题绿色");
 
     await page.evaluate(() => {
       localStorage.setItem("huahua.guestGarden.v1", JSON.stringify({

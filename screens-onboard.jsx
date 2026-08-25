@@ -5,12 +5,13 @@
 function Onboard({ onComplete, onSkip }) {
   const [step, setStep] = useState(0);
   const [runId] = useState(() => "ob-" + Date.now());
-  const [sp, setSp] = useState(window.SPECIES[0]);
+  const [sp, setSp] = useState(null);
   const [name, setName] = useState("");
-  const [traits, setTraits] = useState(window.SPECIES[0].traits.slice(0, 3));
+  const [traits, setTraits] = useState([]);
   const [opener, setOpener] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const themeSp = sp || window.SPECIES[0];
 
   function pickSpecies(s) {
     setSp(s);
@@ -62,18 +63,18 @@ function Onboard({ onComplete, onSkip }) {
 
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden",
-      background: `radial-gradient(140% 70% at 50% -8%, #FBF4E8 0%, var(--paper) 44%, ${sp.soft}55 100%)` }}>
+      background: `radial-gradient(140% 70% at 50% -8%, #FBF4E8 0%, var(--paper) 44%, ${themeSp.soft}55 100%)` }}>
       {/* progress dots */}
       {(step === 2 || step === 3) && (
         <div style={{ position: "absolute", top: 58, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 7, zIndex: 5 }}>
           {[2,3].map(i => (
             <span key={i} style={{ width: i === step ? 20 : 7, height: 7, borderRadius: 999,
-              background: i === step ? sp.deep : "rgba(58,53,46,0.14)", transition: "all .3s" }}></span>
+              background: i === step ? "var(--green-deep)" : "rgba(58,53,46,0.14)", transition: "all .3s" }}></span>
           ))}
         </div>
       )}
-      {step === 0 && <ObWelcome sp={sp} onNext={() => setStep(2)} onSkip={onSkip} />}
-      {step === 2 && <ObSpeciesPicker sp={sp} pickSpecies={pickSpecies} onNext={() => setStep(3)} />}
+      {step === 0 && <ObWelcome sp={themeSp} onNext={() => setStep(2)} onSkip={onSkip} />}
+      {step === 2 && <ObSpeciesPicker sp={sp} pickSpecies={pickSpecies} onNext={() => sp && setStep(3)} />}
       {step === 3 && <ObName sp={sp} name={name} setName={setName} traits={traits} toggleTrait={toggleTrait} onNext={() => setStep(4)} />}
       {step === 4 && <ObGenerate sp={sp} name={name} traits={traits} setOpener={setOpener} onNext={() => setStep(5)} />}
       {step === 5 && <ObReveal sp={sp} name={name} opener={opener}
@@ -121,7 +122,7 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: "92px 20px 0" }}>
       <div style={{ textAlign: "center", flexShrink: 0 }}>
-        <div className="kicker" style={{ color: sp.deep }}>选择植物品类</div>
+        <div className="kicker" style={{ color: "var(--green-deep)" }}>选择植物品类</div>
         <div style={{ fontFamily: "var(--f-journal)", fontSize: 25, fontWeight: 600, color: "var(--ink)", marginTop: 7 }}>
           哪一盆最像它？
         </div>
@@ -133,7 +134,7 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
       <div className="noscroll" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
         gap: 8, padding: "18px 0 112px", alignContent: "start" }}>
         {window.SPECIES.map(s => {
-          const on = s.id === sp.id;
+          const on = Boolean(sp && s.id === sp.id);
           return (
             <button key={s.id} data-picker-card="cover" aria-label={`选择${s.species}`} aria-pressed={on} onClick={() => pickSpecies(s)}
               style={{ minHeight: 122, padding: 6, borderRadius: 15, position: "relative",
@@ -165,8 +166,9 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
 
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "18px 30px 28px",
         background: "linear-gradient(180deg, rgba(247,242,232,0), var(--paper) 30%)" }}>
-        <button onClick={onNext} className="btn-green" style={{ width: "100%", height: 54, fontSize: 16,
-          background: `linear-gradient(180deg, ${sp.accent}, ${sp.deep})` }}>选好了，下一步</button>
+        <button onClick={onNext} disabled={!sp} className="btn-green" style={{ width: "100%", height: 54, fontSize: 16 }}>
+          选好了，下一步
+        </button>
       </div>
     </div>
   );

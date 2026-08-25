@@ -160,7 +160,13 @@ input, textarea { font-family: inherit; }
   box-shadow: 0 6px 16px rgba(30,70,50,0.26);
   transition: transform .12s ease, filter .12s ease;
 }
-.btn-green:active { transform: scale(0.97); filter: brightness(0.94); }
+.btn-green:not(:disabled):active { transform: scale(0.97); filter: brightness(0.94); }
+.btn-green:disabled {
+  background: #C8C6BC;
+  color: rgba(255,255,255,.82);
+  box-shadow: none;
+  cursor: default;
+}
 
 .btn-ghost {
   background: rgba(255,255,255,0.5);

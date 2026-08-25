@@ -36,9 +36,13 @@ for (const required of [
   "transparent-frame",
   "window.coverScale",
   "window.coverOffsetY",
+  "disabled={!sp}",
+  "Boolean(sp && s.id === sp.id)",
 ]) {
   if (!picker.includes(required)) throw new Error(`missing homepage-style picker marker: ${required}`);
 }
 if (picker.includes("PlantAvatar")) throw new Error("picker must not use circular PlantAvatar cards");
+if (picker.includes("${sp.accent}, ${sp.deep}")) throw new Error("picker action button must not follow selected species colors");
+if (!onboarding.includes("useState(null)")) throw new Error("species picker must start without a default selection");
 
 console.log("SPECIES_LIBRARY_OK");

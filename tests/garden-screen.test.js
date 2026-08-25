@@ -28,7 +28,7 @@ for (const forbidden of ["我的小花园", "今日花园", "garden-summary", "g
 }
 if (garden.includes("flat-rack-post")) throw new Error("wall shelf must not render support legs");
 if (!html.includes("screens-garden.jsx?v=20260823p") || html.includes("screens-widget.jsx")) throw new Error("garden screen is not the active third tab");
-if (!html.includes("components.jsx?v=20260823a") || !html.includes("styles.css?v=20260825t")) throw new Error("garden navigation or styles may be stale-cached");
+if (!html.includes("components.jsx?v=20260823a") || !html.includes("styles.css?v=20260825u")) throw new Error("garden navigation or styles may be stale-cached");
 if (garden.includes("FlatGardenWeather") || garden.includes("flat-garden-weather")) throw new Error("garden weather label should be hidden");
 
 console.log("GARDEN_SCREEN_OK");
