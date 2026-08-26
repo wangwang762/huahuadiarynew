@@ -94,6 +94,7 @@ function normalizeRecognition(value, candidates) {
 
 function normalizeTriage(value) {
   const health = ["good", "watch", "sick"].includes(value.health) ? value.health : "watch";
+  const trend = ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown";
   const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
   const route = routeByHealth[health];
   return {
@@ -102,7 +103,12 @@ function normalizeTriage(value) {
       ? value.observations.slice(0, 4).map(item => String(item).slice(0, 90)).filter(Boolean)
       : [],
     likelyCause: String(value.likely_cause || "暂时无法判断原因").slice(0, 160),
-    trend: ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown",
+    trend,
+    trendSummary: String(value.trendSummary || value.trend_summary || (
+      trend === "better" ? "比上次舒展了一些" :
+      trend === "same" ? "和上次差不多" :
+      trend === "worse" ? "有些变化比上次更明显" : "这次暂时无法比较"
+    )).slice(0, 160),
     route,
     confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
   };
@@ -220,6 +226,8 @@ async function execute(payload) {
   const action = payload.action;
   const plant = payload.plant || {};
   const image = safeImage(payload.image);
+  const previousImage = safeImage(payload.previousImage || payload.previous_image);
+  const previousObservedAt = String(payload.previousObservedAt || payload.previous_observed_at || "").slice(0, 80);
   const candidates = safeCandidates(payload.candidates);
   const history = safeMessages(payload.messages);
   const conversation = [{ role: "system", content: SYSTEM_PROMPT }, firstUserMessage(plant, image), ...history];
@@ -242,15 +250,29 @@ async function execute(payload) {
     if (!image) {
       return { ok: true, triage: normalizeTriage({
         health: "watch", observations: ["没有收到清晰照片"], likely_cause: "照片信息不足",
-        trend: "unknown", route: "soft_hint", confidence: 0,
+        trend: "unknown", trend_summary: previousImage ? "这次暂时无法比较" : "这是第一次观察",
+        route: "soft_hint", confidence: 0,
       }), model: MODEL };
     }
-    const prompt = `健康分诊路由。${plantText(plant)}只根据照片里确实可见的叶片、茎干、土壤和整体状态判断，不要因为植物档案原状态良好就默认健康。黄斑、焦枯、萎蔫、卷边、黑斑或大面积变色必须进入watch或sick，不能返回good。只输出JSON：{"health":"good|watch|sick","observations":["可见现象"],"likely_cause":"最可能原因；不确定要说明","trend":"better|same|worse|unknown","route":"record|soft_hint|diagnose","confidence":0.0}。明显异常使用sick+diagnose，轻微异常使用watch+soft_hint，只有没有明显异常才用good+record。`;
+    const prompt = `健康分诊路由。${plantText(plant)}只根据照片里确实可见的叶片、茎干、土壤和整体状态判断，不要因为植物档案原状态良好就默认健康。黄斑、焦枯、萎蔫、卷边、黑斑或大面积变色必须进入watch或sick，不能返回good。健康状态和前后趋势是两个独立判断：即使比上次好转，当前仍可能需要watch或sick；只有两张照片中存在清晰、可见的对比证据时才能声称better。只输出JSON：{"health":"good|watch|sick","observations":["可见现象"],"likely_cause":"最可能原因；不确定要说明","trend":"better|same|worse|unknown","trend_summary":"与上次相比的可见变化","route":"record|soft_hint|diagnose","confidence":0.0}。明显异常使用sick+diagnose，轻微异常使用watch+soft_hint，只有没有明显异常才用good+record。`;
+    const content = previousImage ? [
+      { type: "text", text: `${prompt}\n图1是本次照片。图2是上一次照片，记录时间：${previousObservedAt || "未知"}。` },
+      { type: "image_url", image_url: { url: image } },
+      { type: "image_url", image_url: { url: previousImage } },
+    ] : [
+      { type: "text", text: `${prompt}\n这是第一次观察，没有可比较的上一张照片；trend必须返回unknown，trend_summary必须返回“这是第一次观察”。` },
+      { type: "image_url", image_url: { url: image } },
+    ];
     const raw = await generate([
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] },
+      { role: "user", content },
     ], 480);
-    return { ok: true, triage: normalizeTriage(parseJson(raw)), model: MODEL };
+    const triage = parseJson(raw);
+    if (!previousImage) {
+      triage.trend = "unknown";
+      triage.trend_summary = "这是第一次观察";
+    }
+    return { ok: true, triage: normalizeTriage(triage), model: MODEL };
   }
   if (action === "chat") {
     return { ok: true, reply: await generate(conversation, 700), model: MODEL };

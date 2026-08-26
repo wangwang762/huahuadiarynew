@@ -20,10 +20,10 @@ for (const stale of [
 ]) {
   if (capture.includes(stale)) throw new Error(`capture flow still assumes health before reading the photo: ${stale}`);
 }
-for (const marker of ["async function triage", 'invoke("triage"', "normalizeTriage", "window.HHDoctor = { reply, summarize, recognize, triage }"]) {
+for (const marker of ["async function triage", "previousImage", 'invoke("triage"', "normalizeTriage", "window.HHDoctor = { reply, summarize, recognize, triage }"]) {
   if (!client.includes(marker)) throw new Error(`missing photo triage client marker: ${marker}`);
 }
-for (const marker of ['action === "triage"', "normalizeTriage", "good|watch|sick", "record|soft_hint|diagnose"]) {
+for (const marker of ['action === "triage"', "previous_image", "trend_summary", "normalizeTriage", "good|watch|sick", "record|soft_hint|diagnose"]) {
   if (!fn.includes(marker)) throw new Error(`missing photo triage backend marker: ${marker}`);
 }
 

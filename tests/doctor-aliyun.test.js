@@ -30,12 +30,12 @@ global.fetch = async (url, options) => {
         message: {
           content: wantsTriage
             ? JSON.stringify({
-                health: "sick",
-                observations: ["多片叶面有大面积黄褐斑", "叶尖焦枯"],
-                likely_cause: "可能存在积水或叶片病害",
-                trend: "unknown",
-                route: "diagnose",
-                confidence: 0.91,
+                health: "watch",
+                observations: ["叶尖焦黄"],
+                likely_cause: "盆土偏湿",
+                trend: "worse",
+                trend_summary: "叶尖焦黄范围比上次扩大",
+                confidence: 0.84,
               })
             : wantsRecognition
             ? JSON.stringify({
@@ -117,15 +117,41 @@ function event(method, payload, origin = "https://huahua.example") {
 
   const triageResponse = await handler(event("POST", {
     action: "triage",
-    image: "data:image/jpeg;base64,AA==",
+    image: "data:image/jpeg;base64,CURRENT==",
+    previousImage: "data:image/jpeg;base64,PREVIOUS==",
+    previousObservedAt: "2026-08-20T08:00:00.000Z",
     plant: { id: "p3", name: "懒懒", species: "虎皮兰", days: 1 },
   }));
   const triageBody = JSON.parse(triageResponse.body);
+  const triageModelBody = JSON.parse(calls[calls.length - 1].options.body);
+  const triageImageUrls = triageModelBody.messages.flatMap(message =>
+    Array.isArray(message.content) ? message.content : []
+  ).filter(part => part && part.type === "image_url").map(part => part.image_url.url);
   assert.equal(triageBody.ok, true);
-  assert.equal(triageBody.triage.health, "sick");
-  assert.equal(triageBody.triage.route, "diagnose");
-  assert.deepEqual(triageBody.triage.observations, ["多片叶面有大面积黄褐斑", "叶尖焦枯"]);
-  assert.equal(triageBody.triage.confidence, 0.91);
+  assert.deepEqual(triageImageUrls, [
+    "data:image/jpeg;base64,CURRENT==",
+    "data:image/jpeg;base64,PREVIOUS==",
+  ]);
+  assert.equal(triageBody.triage.health, "watch");
+  assert.equal(triageBody.triage.route, "soft_hint");
+  assert.deepEqual(triageBody.triage.observations, ["叶尖焦黄"]);
+  assert.equal(triageBody.triage.trend, "worse");
+  assert.equal(triageBody.triage.trendSummary, "叶尖焦黄范围比上次扩大");
+  assert.equal(triageBody.triage.confidence, 0.84);
+
+  const firstObservationResponse = await handler(event("POST", {
+    action: "triage",
+    image: "data:image/jpeg;base64,FIRST==",
+    plant: { id: "p3", name: "懒懒", species: "虎皮兰", days: 1 },
+  }));
+  const firstObservationBody = JSON.parse(firstObservationResponse.body);
+  const firstObservationModelBody = JSON.parse(calls[calls.length - 1].options.body);
+  const firstObservationImages = firstObservationModelBody.messages.flatMap(message =>
+    Array.isArray(message.content) ? message.content : []
+  ).filter(part => part && part.type === "image_url").map(part => part.image_url.url);
+  assert.deepEqual(firstObservationImages, ["data:image/jpeg;base64,FIRST=="]);
+  assert.equal(firstObservationBody.triage.trend, "unknown");
+  assert.equal(firstObservationBody.triage.trendSummary, "这是第一次观察");
 
   const rejected = await handler(event("POST", { action: "unknown" }));
   assert.equal(rejected.statusCode, 400);

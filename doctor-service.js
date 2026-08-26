@@ -123,21 +123,29 @@
   function normalizeTriage(raw) {
     const value = raw || {};
     const health = ["good", "watch", "sick"].includes(value.health) ? value.health : "watch";
+    const trend = ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown";
     const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
     return {
       health,
       observations: Array.isArray(value.observations) ? value.observations.slice(0, 4).map(String).filter(Boolean) : [],
       likelyCause: String(value.likelyCause || value.likely_cause || "暂时无法判断原因"),
-      trend: ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown",
+      trend,
+      trendSummary: String(value.trendSummary || value.trend_summary || (
+        trend === "better" ? "比上次舒展了一些" :
+        trend === "same" ? "和上次差不多" :
+        trend === "worse" ? "有些变化比上次更明显" : "这次暂时无法比较"
+      )),
       route: routeByHealth[health],
       confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
     };
   }
 
-  async function triage({ plant, image }) {
+  async function triage({ plant, image, previousImage, previousObservedAt }) {
     const result = await invoke("triage", {
       plant: plantContext(plant),
       image: image || "",
+      previousImage: previousImage || "",
+      previousObservedAt: previousObservedAt || "",
     });
     return normalizeTriage(result.triage);
   }

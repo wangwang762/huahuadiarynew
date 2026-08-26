@@ -12,14 +12,14 @@ const build = fs.readFileSync("scripts/build-cloudbase.mjs", "utf8");
 for (const marker of ["window.HHDoctorConfig", "fetch(endpoint", 'method: "POST"', "AbortController", "window.HHDoctor"]) {
   if (!client.includes(marker)) throw new Error(`missing doctor client marker: ${marker}`);
 }
-for (const marker of ["async function recognize", "async function triage", "action, ...payload", "matchedIds", "validIds.has(id)", "window.HHDoctor = { reply, summarize, recognize, triage }"]) {
+for (const marker of ["async function recognize", "async function triage", "previousImage", "action, ...payload", "matchedIds", "validIds.has(id)", "window.HHDoctor = { reply, summarize, recognize, triage }"]) {
   if (!client.includes(marker)) throw new Error(`missing recognition client marker: ${marker}`);
 }
 if (client.includes("app.callFunction")) throw new Error("doctor client still calls CloudBase function");
 for (const marker of ["window.HHDoctorConfig", 'endpoint: "https://huahua-r-doctor-srnkxzqpos.cn-hangzhou.fcapp.run"', "timeoutMs"]) {
   if (!config.includes(marker)) throw new Error(`missing doctor config marker: ${marker}`);
 }
-for (const marker of ["DASHSCOPE_API_KEY", "qwen3-vl-flash", "/chat/completions", 'action === "summary"', "confidence", "followup_days", "exports.handler"]) {
+for (const marker of ["DASHSCOPE_API_KEY", "qwen3-vl-flash", "/chat/completions", 'action === "summary"', "previous_image", "trend_summary", "confidence", "followup_days", "exports.handler"]) {
   if (!fn.includes(marker)) throw new Error(`missing doctor function marker: ${marker}`);
 }
 if (chat.includes("这次约 60ml")) throw new Error("doctor still contains a fabricated network fallback");
@@ -75,7 +75,7 @@ async function verifyRecognitionClient() {
         return {
           json: async () => ({ ok: true, triage: {
             health: "sick", observations: ["叶片大面积黄褐", "叶尖焦枯"],
-            likelyCause: "可能积水", trend: "unknown", route: "diagnose", confidence: 1.6,
+            likelyCause: "可能积水", trend: "worse", trend_summary: "焦黄范围比上次扩大", route: "diagnose", confidence: 1.6,
           } }),
         };
       }
@@ -128,13 +128,19 @@ async function verifyRecognitionClient() {
   const triage = await window.HHDoctor.triage({
     plant: { id: "p3", name: "懒懒", species: "虎皮兰", days: 1, diary: "不得发送" },
     image: "data:image/jpeg;base64,DD==",
+    previousImage: "data:image/jpeg;base64,EE==",
+    previousObservedAt: "2026-08-20T08:00:00.000Z",
   });
   assert.equal(requestBody.action, "triage");
   assert.equal(requestBody.plant.species, "虎皮兰");
   assert.equal(Object.prototype.hasOwnProperty.call(requestBody.plant, "diary"), false);
+  assert.equal(requestBody.previousImage, "data:image/jpeg;base64,EE==");
+  assert.equal(requestBody.previousObservedAt, "2026-08-20T08:00:00.000Z");
   assert.equal(triage.health, "sick");
   assert.equal(triage.route, "diagnose");
   assert.equal(triage.confidence, 1);
+  assert.equal(triage.trend, "worse");
+  assert.equal(triage.trendSummary, "焦黄范围比上次扩大");
   assert.deepEqual(Array.from(triage.observations), ["叶片大面积黄褐", "叶尖焦枯"]);
 }
 
