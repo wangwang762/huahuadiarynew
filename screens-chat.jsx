@@ -160,7 +160,9 @@ function DiagnosisSummaryCard({ summary, onView }) {
         <div style={{ fontFamily: "var(--f-journal)", fontWeight: 700, fontSize: 17, color: "var(--ink)" }}>
           已记入{summary.plantName || "它"}的日记
         </div>
-        <div style={{ fontSize: 12.5, color: "var(--ink-faint)", marginTop: 4 }}>本次问诊已整理成一篇养护记录</div>
+        <div style={{ fontSize: 12.5, color: "var(--ink-faint)", marginTop: 4 }}>
+          {summary.attached ? "本次建议已补充到刚才的观察记录" : "本次问诊已整理成一篇养护记录"}
+        </div>
         <div style={{ margin: "14px 0 4px", padding: "12px 14px", borderRadius: 12, background: "var(--green-bubble)", textAlign: "left" }}>
           <div style={{ fontSize: 11.5, color: "var(--green-deep)", fontWeight: 700, letterSpacing: ".04em", opacity: 0.8 }}>本次养护要点</div>
           <div style={{ fontFamily: "var(--f-journal)", fontWeight: 700, fontSize: 15, color: "var(--ink)", marginTop: 3 }}>
@@ -280,7 +282,7 @@ function DoctorChat({ go, plant, observation, onSaveEntry, onUpdateEntry }) {
       });
       await onSaveEntry(p, entry);
     }
-    return { plantName: p.name, points: (summary.points || []).join(" · ") || summary.plan };
+    return { plantName: p.name, points: (summary.points || []).join(" · ") || summary.plan, attached: Boolean(observation) };
   }
   return (
     <ChatBase go={go}

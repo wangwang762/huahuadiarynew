@@ -3,6 +3,7 @@ const assert = require("assert");
 const fs = require("fs");
 
 const baseUrl = process.env.HH_TEST_URL || "http://127.0.0.1:4190/花花日记本.html?v=capture-triage-test";
+const scenario = process.env.HH_TRIAGE_SCENARIO === "good" ? "good" : "worse";
 const accountSource = fs.readFileSync("account-service.js", "utf8");
 const localVendor = {
   react: fs.readFileSync("vendor/react.development.js", "utf8"),
@@ -74,9 +75,12 @@ const plant = {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, triage: {
-        health: "watch", observations: ["叶尖焦黄"],
-        likelyCause: "盆土偏湿", trend: "worse", trend_summary: "叶尖焦黄范围比上次扩大", confidence: 0.84,
+      body: JSON.stringify({ ok: true, triage: scenario === "good" ? {
+        health: "good", observations: [], likelyCause: "暂未看到明显异常",
+        trend: "same", trend_summary: "和上次差不多", confidence: 0.91,
+      } : {
+        health: "watch", observations: ["叶尖焦黄"], likelyCause: "盆土偏湿",
+        trend: "worse", trend_summary: "叶尖焦黄范围比上次扩大", confidence: 0.84,
       } }),
     });
   });
@@ -96,26 +100,42 @@ const plant = {
     });
     assert.equal(String(captureSource || "").startsWith("data:image/"), true, `测试照片没有载入：${captureSource}`);
     await page.getByRole("button", { name: "让花花看看" }).click();
-    await page.getByText("叶尖焦黄范围比上次扩大", { exact: true }).waitFor({ timeout: 12_000 });
-    assert.equal(await page.getByText("叶尖焦黄", { exact: false }).count() > 0, true, "异常现象没有展示");
+    const expectedTrend = scenario === "good" ? "和上次差不多" : "叶尖焦黄范围比上次扩大";
+    await page.getByText(expectedTrend, { exact: true }).waitFor({ timeout: 12_000 });
     assert.equal(await page.getByText("状态不错，记一笔", { exact: true }).count(), 0, "明显异常仍被显示为状态不错");
     const primaryBackground = await page.getByRole("button", { name: "记入日记" }).evaluate(element => getComputedStyle(element).backgroundImage);
     assert.notEqual(primaryBackground, "none", "记日记主按钮没有使用主题绿色");
-    await page.screenshot({ path: "/tmp/huahua-capture-worse-comparison.png", fullPage: true });
-    await page.getByRole("button", { name: "带着这张照片问问花大夫" }).click();
-    await page.getByText("花大夫", { exact: true }).first().waitFor({ timeout: 8_000 });
-    const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem("huahua.guestGarden.v1")));
-    const diary = persisted.plants[0].diary;
-    const observations = diary.filter(entry => entry.kind === "record");
-    assert.equal(observations.length, 2, "进入问诊前观察记录没有且仅新增一次");
-    const latest = observations.find(entry => entry.id !== "triage-previous");
-    assert.ok(latest, "没有找到刚保存的观察记录");
-    assert.equal(latest.comparison.previousEntryId, "triage-previous", "比较记录没有关联上一次照片");
-    assert.equal(String(latest.photoData || "").startsWith("data:image/jpeg;base64,"), true, "观察记录没有持久化压缩照片");
-    assert.equal(latest.doctorStatus, "started", "进入问诊前没有把观察记录标为 started");
-    await page.screenshot({ path: "/tmp/huahua-capture-comparison-doctor.png", fullPage: true });
+    if (scenario === "good") {
+      assert.equal(await page.getByRole("button", { name: "带着这张照片问问花大夫" }).count(), 0, "正常状态不应主动显示问诊入口");
+      await page.screenshot({ path: "/tmp/huahua-capture-good-comparison.png", fullPage: true });
+      await page.getByRole("button", { name: "记入日记" }).click();
+      await page.getByText("和 懒懒 的日记", { exact: true }).waitFor({ timeout: 8_000 });
+      const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem("huahua.guestGarden.v1")));
+      const latest = persisted.plants[0].diary.find(entry => entry.id !== "triage-previous" && entry.kind === "record");
+      assert.ok(latest, "正常观察没有保存");
+      assert.equal(latest.comparison.trend, "same");
+      assert.equal(latest.doctorStatus, "not_needed");
+      assert.equal(String(latest.photoData || "").startsWith("data:image/jpeg;base64,"), true, "正常观察没有持久化压缩照片");
+    } else {
+      assert.equal(await page.getByText("叶尖焦黄", { exact: false }).count() > 0, true, "异常现象没有展示");
+      await page.screenshot({ path: "/tmp/huahua-capture-worse-comparison.png", fullPage: true });
+      await page.getByRole("button", { name: "带着这张照片问问花大夫" }).click();
+      await page.getByText("花大夫", { exact: true }).first().waitFor({ timeout: 8_000 });
+      const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem("huahua.guestGarden.v1")));
+      const diary = persisted.plants[0].diary;
+      const observations = diary.filter(entry => entry.kind === "record");
+      assert.equal(observations.length, 2, "进入问诊前观察记录没有且仅新增一次");
+      const latest = observations.find(entry => entry.id !== "triage-previous");
+      assert.ok(latest, "没有找到刚保存的观察记录");
+      assert.equal(latest.comparison.previousEntryId, "triage-previous", "比较记录没有关联上一次照片");
+      assert.equal(String(latest.photoData || "").startsWith("data:image/jpeg;base64,"), true, "观察记录没有持久化压缩照片");
+      assert.equal(latest.doctorStatus, "started", "进入问诊前没有把观察记录标为 started");
+      await page.screenshot({ path: "/tmp/huahua-capture-comparison-doctor.png", fullPage: true });
+    }
     assert.deepEqual(errors, [], `浏览器错误：${errors.join(" | ")}`);
-    console.log("CAPTURE_TRIAGE_BROWSER_OK /tmp/huahua-capture-worse-comparison.png /tmp/huahua-capture-comparison-doctor.png");
+    console.log(scenario === "good"
+      ? "CAPTURE_TRIAGE_BROWSER_GOOD_OK /tmp/huahua-capture-good-comparison.png"
+      : "CAPTURE_TRIAGE_BROWSER_WORSE_OK /tmp/huahua-capture-worse-comparison.png /tmp/huahua-capture-comparison-doctor.png");
   } finally {
     await context.close();
     await browser.close();
