@@ -9,6 +9,7 @@ const localVendor = {
   reactDom: fs.readFileSync("vendor/react-dom.development.js", "utf8"),
   babel: fs.readFileSync("vendor/babel.min.js", "utf8"),
 };
+const plantPhotoData = `data:image/png;base64,${fs.readFileSync("assets/plants/final-v1/hupilan.png").toString("base64")}`;
 
 const plant = {
   id: "triage-hupilan", name: "懒懒", species: "虎皮兰", shape: "upright",
@@ -16,7 +17,15 @@ const plant = {
   tagsOn: ["安静", "有耐心"], tagsOff: [], custom: "明亮散射光，盆土干透再浇",
   style: "安静。", voice: "我会安静地长大。", days: 1, mood: "初遇", stars: 5,
   status: "状态稳定", statusTone: "good", photoId: "hupilan", born: "2026年8月25日",
-  diary: [{ id: "triage-born", day: "今天", date: "8月25日", mood: "初遇", type: "born", photo: "hupilan", quote: ["第一次见面。"], voice: "你好。", stars: 5 }],
+  diary: [
+    {
+      id: "triage-previous", kind: "record", day: "昨天", date: "8月25日", mood: "观察", type: "photo", photo: "hupilan",
+      photoData: plantPhotoData,
+      observedAt: "2026-08-25T08:00:00.000Z", comparison: { trend: "unknown", summary: "这是第一次观察", health: "good" },
+      doctorStatus: "not_needed", quote: ["昨天的观察。"], voice: "你好。", stars: 5,
+    },
+    { id: "triage-born", day: "昨天", date: "8月25日", mood: "初遇", type: "born", photo: "hupilan", quote: ["第一次见面。"], voice: "你好。", stars: 5 },
+  ],
 };
 
 (async () => {
@@ -47,7 +56,7 @@ const plant = {
   await page.route(/plant-photos\.js/, route => route.fulfill({
     status: 200,
     contentType: "text/javascript",
-    body: 'window.PLANT_IMG = { hupilan: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL+WQAAAABJRU5ErkJggg==" };',
+    body: `window.PLANT_IMG = { hupilan: ${JSON.stringify(plantPhotoData)} };`,
   }));
   await page.route(/unpkg\.com\/react@.*\/react\.development\.js/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: localVendor.react }));
   await page.route(/unpkg\.com\/react-dom@.*\/react-dom\.development\.js/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: localVendor.reactDom }));
@@ -60,12 +69,14 @@ const plant = {
     assert.equal(body.plant.species, "虎皮兰");
     assert.equal(String(body.image || "").startsWith("data:image/"), true,
       `健康分诊没有携带新照片（收到 ${String(body.image || "").slice(0, 48) || "空值"}）`);
+    assert.equal(String(body.previousImage || "").startsWith("data:image/"), true, "双图比较没有携带上一次照片");
+    assert.equal(body.previousObservedAt, "2026-08-25T08:00:00.000Z", "上一次观察时间没有传给分诊");
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ ok: true, triage: {
-        health: "sick", observations: ["多片叶面有大面积黄褐斑", "叶尖焦枯"],
-        likelyCause: "可能存在积水或叶片病害", trend: "unknown", route: "diagnose", confidence: 0.91,
+        health: "watch", observations: ["叶尖焦黄"],
+        likelyCause: "盆土偏湿", trend: "worse", trend_summary: "叶尖焦黄范围比上次扩大", confidence: 0.84,
       } }),
     });
   });
@@ -85,14 +96,26 @@ const plant = {
     });
     assert.equal(String(captureSource || "").startsWith("data:image/"), true, `测试照片没有载入：${captureSource}`);
     await page.getByRole("button", { name: "让花花看看" }).click();
-    await page.getByText("看起来不太舒服", { exact: true }).waitFor({ timeout: 12_000 });
-    assert.equal(await page.getByText("多片叶面有大面积黄褐斑", { exact: false }).count() > 0, true, "异常现象没有展示");
+    await page.getByText("叶尖焦黄范围比上次扩大", { exact: true }).waitFor({ timeout: 12_000 });
+    assert.equal(await page.getByText("叶尖焦黄", { exact: false }).count() > 0, true, "异常现象没有展示");
     assert.equal(await page.getByText("状态不错，记一笔", { exact: true }).count(), 0, "明显异常仍被显示为状态不错");
-    const buttonBackground = await page.getByRole("button", { name: "去问花大夫" }).evaluate(element => getComputedStyle(element).backgroundImage);
-    assert.equal(buttonBackground.includes("53, 115, 85") || buttonBackground.includes("35, 75, 54"), true, "问诊按钮没有使用统一主题色");
-    await page.screenshot({ path: "/tmp/huahua-capture-sick-triage.png", fullPage: true });
+    const primaryBackground = await page.getByRole("button", { name: "记入日记" }).evaluate(element => getComputedStyle(element).backgroundImage);
+    assert.notEqual(primaryBackground, "none", "记日记主按钮没有使用主题绿色");
+    await page.screenshot({ path: "/tmp/huahua-capture-worse-comparison.png", fullPage: true });
+    await page.getByRole("button", { name: "带着这张照片问问花大夫" }).click();
+    await page.getByText("花大夫", { exact: true }).first().waitFor({ timeout: 8_000 });
+    const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem("huahua.guestGarden.v1")));
+    const diary = persisted.plants[0].diary;
+    const observations = diary.filter(entry => entry.kind === "record");
+    assert.equal(observations.length, 2, "进入问诊前观察记录没有且仅新增一次");
+    const latest = observations.find(entry => entry.id !== "triage-previous");
+    assert.ok(latest, "没有找到刚保存的观察记录");
+    assert.equal(latest.comparison.previousEntryId, "triage-previous", "比较记录没有关联上一次照片");
+    assert.equal(String(latest.photoData || "").startsWith("data:image/jpeg;base64,"), true, "观察记录没有持久化压缩照片");
+    assert.equal(latest.doctorStatus, "started", "进入问诊前没有把观察记录标为 started");
+    await page.screenshot({ path: "/tmp/huahua-capture-comparison-doctor.png", fullPage: true });
     assert.deepEqual(errors, [], `浏览器错误：${errors.join(" | ")}`);
-    console.log("CAPTURE_TRIAGE_BROWSER_OK /tmp/huahua-capture-sick-triage.png");
+    console.log("CAPTURE_TRIAGE_BROWSER_OK /tmp/huahua-capture-worse-comparison.png /tmp/huahua-capture-comparison-doctor.png");
   } finally {
     await context.close();
     await browser.close();

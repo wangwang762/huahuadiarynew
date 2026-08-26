@@ -2,7 +2,7 @@
    花花日记本 · 拍照记录 → AI 分诊
    主人主动拍照 → AI 判断：状态好（情绪文案记录）/ 需诊断（指路花大夫）
    ============================================================ */
-function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
+function CaptureFlow({ go, plant, intake = false, onSaveEntry, onUpdateEntry }) {
   const p = plant;
   const [step, setStep] = useState("shoot"); // shoot | analyzing | identify | good | abnormal
   const [voice, setVoice] = useState("");
@@ -13,13 +13,20 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
   const [diagnosisPhoto, setDiagnosisPhoto] = useState("");
   const [triageResult, setTriageResult] = useState(null);
   const [triageError, setTriageError] = useState("");
+  const [storedPhoto, setStoredPhoto] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+  const savedObservationRef = useRef(null);
+  const savePromiseRef = useRef(null);
+  const previousEntry = (p.diary || []).find(entry =>
+    entry.kind === "record" && /^data:image\/(?:jpeg|png|webp);base64,/.test(entry.photoData || "")
+  ) || null;
 
   async function analyze() {
     setStep("analyzing");
     // clinic walk-in: AI must first work out WHICH plant this is
     if (intake) {
       setRecognitionError("");
-      const image = await capturePhoto();
+      const image = await capturePhoto(960, 0.82);
       setDiagnosisPhoto(image);
       try {
         const result = await window.HHDoctor.recognize({ image, plants: window.PLANTS });
@@ -52,11 +59,20 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
       }
       return;
     }
-    const image = await capturePhoto();
+    const image = await capturePhoto(960, 0.82);
     setDiagnosisPhoto(image);
     setTriageError("");
     try {
-      const triageResult = await window.HHDoctor.triage({ plant: p, image });
+      const [photoData, triageResult] = await Promise.all([
+        resizeDataImage(image, 720, 0.72),
+        window.HHDoctor.triage({
+          plant: p,
+          image,
+          previousImage: previousEntry ? previousEntry.photoData : "",
+          previousObservedAt: previousEntry ? previousEntry.observedAt : "",
+        }),
+      ]);
+      setStoredPhoto(photoData);
       setTriageResult(triageResult);
       setVoice(p.voice);
       if (triageResult.route === "record") setTimeout(() => setStep("good"), 900);
@@ -66,43 +82,88 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
       setTriageError(error && error.message ? error.message : "这次没有看清照片");
       setTriageResult({
         health: "watch", route: "soft_hint", observations: ["这次没有看清照片"],
-        likelyCause: "暂时无法判断状态", trend: "unknown", confidence: 0,
+        likelyCause: "暂时无法判断状态", trend: "unknown",
+        trendSummary: previousEntry ? "这次暂时无法可靠比较" : "这是第一次观察", confidence: 0,
       });
+      setStoredPhoto(await resizeDataImage(image, 720, 0.72));
       setTimeout(() => setStep("abnormal"), 650);
     }
   }
 
-  async function saveRecord(concern) {
-    const observations = triageResult && Array.isArray(triageResult.observations) ? triageResult.observations : [];
-    const concernText = observations.length ? observations.join("、") : "照片里有一些需要继续观察的变化";
-    const entry = concern
-      ? window.makeEntry("record", p, {
-          mood: "留心", voice: p.voice,
-          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "发现了一些需要留心的变化" }, "，先记下了。"],
-          concern: concernText,
-          photo: p.photoId, stars: 3,
-        })
-      : window.makeEntry("record", p, {
-          mood: p.mood, voice: voice || p.voice,
-          quote: ["今天给", { hl: p.name }, "拍了张照，", { hl: "暂时没看到明显异常" }, "。"],
-          photo: p.photoId,
-        });
+  function buildObservationEntry() {
+    const result = triageResult || {};
+    const observations = Array.isArray(result.observations) ? result.observations.filter(Boolean) : [];
+    const comparison = {
+      previousEntryId: previousEntry ? previousEntry.id : null,
+      trend: result.trend || "unknown",
+      summary: result.trendSummary || (previousEntry ? "这次暂时无法比较" : "这是第一次观察"),
+      health: result.health || "watch",
+      observations,
+      likelyCause: result.likelyCause || "暂时无法判断",
+      confidence: Number(result.confidence) || 0,
+    };
+    return window.makeEntry("record", p, {
+      mood: result.health === "good" ? p.mood : "留心",
+      voice: voice || p.voice,
+      photo: p.photoId,
+      photoData: storedPhoto,
+      comparison,
+      doctorStatus: result.health === "good" ? "not_needed" : "suggested",
+      concern: result.health === "good" ? null : observations.join("、"),
+      quote: [comparison.summary],
+    });
+  }
+
+  async function ensureSavedObservation() {
+    if (savedObservationRef.current) return savedObservationRef.current;
+    if (savePromiseRef.current) return savePromiseRef.current;
+    const entry = buildObservationEntry();
+    savePromiseRef.current = (async () => {
+      await onSaveEntry(p, entry);
+      savedObservationRef.current = entry;
+      return entry;
+    })();
+    try {
+      return await savePromiseRef.current;
+    } finally {
+      savePromiseRef.current = null;
+    }
+  }
+
+  async function saveAndOpenDiary() {
+    if (saveBusy) return;
+    setSaveBusy(true);
     setSaveError("");
     try {
-      await onSaveEntry(p, entry);
+      await ensureSavedObservation();
       go("plantDiary", p);
     } catch (error) {
       setSaveError(error && error.message ? error.message : "这篇记录没有保存成功，请再试一次");
+      setSaveBusy(false);
+    }
+  }
+
+  async function saveAndOpenDoctor() {
+    if (saveBusy) return;
+    setSaveBusy(true);
+    setSaveError("");
+    try {
+      let entry = await ensureSavedObservation();
+      if (entry.doctorStatus !== "started") {
+        entry = await onUpdateEntry(p, { ...entry, doctorStatus: "started" });
+        savedObservationRef.current = entry;
+      }
+      p.diagnosisPhoto = diagnosisPhoto;
+      go("doctorChat", p, { observation: entry });
+    } catch (error) {
+      setSaveError(error && error.message ? error.message : "照片已经记下，但暂时没有进入问诊");
+      setSaveBusy(false);
     }
   }
 
   async function pickExisting(pp) {
     pp.diagnosisPhoto = diagnosisPhoto || await capturePhoto();
     go("doctorChat", pp);
-  }
-  function openDoctor() {
-    p.diagnosisPhoto = diagnosisPhoto;
-    go("doctorChat", p);
   }
   function startNewFriendDiagnosis(species, image, fromRecognitionFailure = false, errorMessage = "") {
     const cleanSpecies = String(species || "待识别").trim();
@@ -121,14 +182,13 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
     startNewFriendDiagnosis(recognition && recognition.species, diagnosisPhoto || await capturePhoto());
   }
 
-  async function capturePhoto() {
+  async function capturePhoto(maxEdge = 960, quality = 0.82) {
     const slot = document.getElementById(`capture-${p.photoId}`);
     const image = slot && slot.shadowRoot && slot.shadowRoot.querySelector(".frame img");
     const source = image && image.src ? image.src : window.photoFor(p.photoId);
     if (!source) return "";
     try {
       const bitmap = await createImageBitmap(await (await fetch(source)).blob());
-      const maxEdge = 960;
       const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
@@ -138,9 +198,28 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       bitmap.close();
-      return canvas.toDataURL("image/jpeg", 0.82);
+      return canvas.toDataURL("image/jpeg", quality);
     } catch (_) {
       return source.startsWith("data:image/") || source.startsWith("https://") ? source : "";
+    }
+  }
+
+  async function resizeDataImage(source, maxEdge = 720, quality = 0.72) {
+    if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(String(source || ""))) return "";
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(source)).blob());
+      const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+      canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#F7F3E8";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      return canvas.toDataURL("image/jpeg", quality);
+    } catch (_) {
+      return String(source || "");
     }
   }
 
@@ -186,6 +265,18 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
           )}
         </div>
 
+        {(step === "good" || step === "abnormal") && triageResult && (
+          <div className="soft-fade" style={{ marginTop: 15, width: "100%", textAlign: "center" }}>
+            <div className="serif" style={{ fontSize: 15.5, lineHeight: 1.55,
+              color: triageResult.trend === "worse" ? "var(--terra)" : triageResult.trend === "better" ? "var(--green-deep)" : "var(--ink-soft)" }}>
+              {triageResult.trendSummary || (previousEntry ? "这次暂时无法比较" : "这是第一次观察")}
+            </div>
+            <div className="kicker" style={{ marginTop: 5, color: "var(--ink-faint)" }}>
+              {previousEntry ? "和上一次照片比较" : "第一张可比较的观察照片"}
+            </div>
+          </div>
+        )}
+
         {/* ---- step content ---- */}
         {step === "shoot" && (
           <div className="soft-fade" style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -218,7 +309,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
 
         {/* ---- GOOD: emotional record ---- */}
         {step === "good" && (
-          <div className="soft-fade" style={{ marginTop: 24, width: "100%" }}>
+          <div className="soft-fade" style={{ marginTop: 16, width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14 }}>
               <span style={{ width: 22, height: 22, borderRadius: "50%", background: p.accent, display: "flex",
                 alignItems: "center", justifyContent: "center" }}><Icon name="check" size={14} color="#fff" stroke={2.6} /></span>
@@ -238,10 +329,10 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
               </div>
             </div>
 
-            <button onClick={() => saveRecord(false)} className="btn-green"
+            <button onClick={saveAndOpenDiary} disabled={saveBusy} className="btn-green"
               style={{ marginTop: 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 8 }}>
-              <Icon name="book" size={19} color="#fff" /> 存入日记
+                justifyContent: "center", gap: 8, opacity: saveBusy ? .68 : 1 }}>
+              <Icon name="book" size={19} color="#fff" /> {saveBusy ? "正在记下……" : "记入日记"}
             </button>
             <button onClick={() => setStep("shoot")} style={{ marginTop: 12, width: "100%", fontSize: 14, color: "var(--ink-faint)" }}>重拍一张</button>
           </div>
@@ -249,36 +340,30 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry }) {
 
         {/* ---- ABNORMAL: route to doctor ---- */}
         {step === "abnormal" && (
-          <div className="soft-fade" style={{ marginTop: 24, width: "100%" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14 }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--terra)", display: "flex",
-                alignItems: "center", justifyContent: "center" }}><Icon name="bell" size={13} color="#fff" /></span>
-              <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--terra)" }}>
-                {triageError ? "这次没有看清" : isSick ? "看起来不太舒服" : "发现一点需要留心的变化"}
-              </span>
-            </div>
-
-            <div className="glass-card" style={{ padding: "18px 18px 16px", border: "1px solid rgba(201,138,60,0.3)" }}>
+          <div className="soft-fade" style={{ marginTop: 16, width: "100%" }}>
+            <div className="glass-card" style={{ padding: "16px 18px", border: "1px solid var(--hairline)" }}>
+              <div style={{ fontFamily: "var(--f-journal)", fontSize: 15.5, fontWeight: 650, color: "var(--ink)", marginBottom: 7 }}>
+                {triageError ? "这次没看清，先把照片留下" : isSick ? "有几处变化值得留心" : "发现一点需要继续观察的变化"}
+              </div>
               <div className="serif" style={{ fontSize: 15.5, color: "var(--ink)", lineHeight: 1.6 }}>
                 {triageError
-                  ? <>花花没能可靠判断这张照片，<em style={{ color: "var(--terra)", fontStyle: "normal" }}>不会把它当成状态良好</em>。可以重拍，或直接让花大夫继续看看。</>
-                  : <>花花在 <em style={{ color: "var(--terra)", fontStyle: "normal" }}>{p.name}</em> 身上看到了{visibleObservations.length ? visibleObservations.join("、") : "一些异常变化"}。{triageResult && triageResult.likelyCause ? `可能是${triageResult.likelyCause}。` : ""}要不要让<em style={{ color: "var(--green-deep)", fontStyle: "normal" }}>花大夫</em>继续诊断？</>}
-              </div>
-              <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <PlantAvatar plant={p} size={30} />
-                <div style={{ background: p.bubble, borderRadius: 14, borderTopLeftRadius: 4, padding: "9px 13px",
-                  fontFamily: "var(--f-journal)", fontSize: 14.5, color: "var(--ink)", border: `1px solid ${p.accent}22` }}>
-                  {isSick ? "我好像真的有点不舒服，陪我去问问花大夫吧。" : "有一点变化，先留心看看我吧。"}
-                </div>
+                  ? <>照片会先收进日记，等下次再拍时还能继续比较；也可以带着它问问花大夫。</>
+                  : <>照片里看到{visibleObservations.length ? visibleObservations.join("、") : "一些变化"}。{triageResult && triageResult.likelyCause ? `可能与${triageResult.likelyCause}有关。` : ""}</>}
               </div>
             </div>
 
-            <button onClick={openDoctor} className="btn-green"
+            <button onClick={saveAndOpenDiary} disabled={saveBusy} className="btn-green"
               style={{ marginTop: 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 8 }}>
-              <Icon name="doctor" size={20} color="#fff" /> 去问花大夫
+                justifyContent: "center", gap: 8, opacity: saveBusy ? .68 : 1 }}>
+              <Icon name="book" size={19} color="#fff" /> {saveBusy ? "正在记下……" : "记入日记"}
             </button>
-            <button onClick={() => saveRecord(true)} style={{ marginTop: 12, width: "100%", fontSize: 14, color: "var(--ink-faint)" }}>先不诊断，只记录一下</button>
+            <button onClick={saveAndOpenDoctor} disabled={saveBusy}
+              style={{ marginTop: 12, width: "100%", minHeight: 42, fontSize: 14.5, color: "var(--green-deep)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 7, opacity: saveBusy ? .55 : 1 }}>
+              <Icon name="doctor" size={18} color="var(--green-deep)" /> 带着这张照片问问花大夫
+            </button>
+            <button onClick={() => setStep("shoot")} disabled={saveBusy}
+              style={{ marginTop: 4, width: "100%", fontSize: 13.5, color: "var(--ink-faint)" }}>重拍一张</button>
           </div>
         )}
       </div>

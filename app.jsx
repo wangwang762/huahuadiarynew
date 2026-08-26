@@ -113,7 +113,8 @@ function App({ t = {} }) {
       {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />}
       {top.view === "onboard" && <Onboard onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
-      {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake} onSaveEntry={addEntry} />}
+      {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
+        onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "chat" && <PlantChat go={go} plant={top.plant} />}
       {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}
