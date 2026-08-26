@@ -116,7 +116,8 @@ function App({ t = {} }) {
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "chat" && <PlantChat go={go} plant={top.plant} />}
-      {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
+      {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} observation={top.observation}
+        onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}
       {top.view === "profile" && <ProfileScreen go={go} plant={top.plant} onSave={savePlant} />}
 

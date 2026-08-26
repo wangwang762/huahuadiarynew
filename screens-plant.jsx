@@ -103,7 +103,10 @@ function PlantDiary({ go, plant, t = {} }) {
         })}
       </div>
       <div style={{ padding: "12px 20px 0" }}>
-        <DiaryTimeline plant={p} entries={shown} onDiagnose={(pl) => go("doctorChat", pl)} />
+        <DiaryTimeline plant={p} entries={shown} onDiagnose={(p, d) => {
+          p.diagnosisPhoto = d && (d.photoData || window.photoFor(d.photo));
+          go("doctorChat", p, { observation: d });
+        }} />
       </div>
 
       {report && <GrowthReport plant={p} onClose={() => setReport(false)} />}

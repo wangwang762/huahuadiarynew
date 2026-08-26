@@ -84,25 +84,49 @@ function DiaryTimeline({ plant, entries, onDiagnose }) {
                 </div>
                 {d.photo && (
                   <div className="snap" style={{ width: 78, transform: `rotate(${i % 2 ? -4 : 4}deg)`, alignSelf: "flex-start", flexShrink: 0 }}>
-                    <image-slot id={d.photo} shape="rounded" radius="3" src={window.photoFor(d.photo)}
+                    <image-slot id={d.photo} shape="rounded" radius="3" src={d.photoData || window.photoFor(d.photo)}
                       style={{ width: "68px", height: "82px", display: "block" }} placeholder="加照片"></image-slot>
                   </div>
                 )}
               </div>
 
+              {d.comparison && (
+                <div style={{ marginTop: 11, paddingTop: 9, borderTop: "1px dashed var(--hairline)",
+                  display: "flex", alignItems: "flex-start", gap: 7 }}>
+                  <Icon name={d.comparison.trend === "better" ? "leaf" : "camera"}
+                    size={14} color={d.comparison.trend === "better" ? "var(--green-deep)" : d.comparison.trend === "worse" ? "var(--terra)" : "var(--ink-faint)"} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, lineHeight: 1.45,
+                      color: d.comparison.trend === "better" ? "var(--green-deep)" : d.comparison.trend === "worse" ? "var(--terra)" : "var(--ink-soft)" }}>
+                      {d.comparison.summary || "这次暂时无法比较"}
+                    </div>
+                    {d.comparison.previousEntryId && <div style={{ marginTop: 2, fontSize: 10.5, color: "var(--ink-faint)" }}>已和上一次照片比较</div>}
+                  </div>
+                </div>
+              )}
+
+              {d.diagnosis && (
+                <div style={{ marginTop: 11, paddingTop: 10, borderTop: "1px dashed var(--green-soft)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7,
+                    fontSize: 11.5, fontWeight: 700, color: "var(--green-deep)" }}>
+                    <Icon name="doctor" size={13} color="var(--green-deep)" /> 花大夫补充
+                  </div>
+                  <div className="serif" style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ink)" }}>{d.diagnosis.conclusion}</div>
+                  <div style={{ marginTop: 5, fontSize: 12.5, lineHeight: 1.5, color: "var(--ink-soft)" }}>{d.diagnosis.plan}</div>
+                </div>
+              )}
+
               {/* soft concern hook — issue observed but user deferred the doctor */}
-              {d.concern && (
-                <button onClick={() => onDiagnose && onDiagnose(p)}
+              {d.concern && !d.diagnosis && (
+                <button onClick={() => onDiagnose && onDiagnose(p, d)}
                   style={{ width: "100%", marginTop: 11, display: "flex", alignItems: "center", gap: 9, textAlign: "left",
-                    background: "rgba(201,138,60,0.10)", border: "1px solid rgba(201,138,60,0.28)",
-                    borderRadius: "var(--r-md)", padding: "9px 11px" }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "rgba(201,138,60,0.18)",
-                    display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon name="bell" size={12} color="var(--terra)" />
+                    background: "transparent", border: "0", borderRadius: "var(--r-md)", padding: "8px 0 1px" }}>
+                  <Icon name="doctor" size={15} color="var(--green-deep)" />
+                  <span style={{ flex: 1, fontSize: 12.5, color: "var(--green-deep)", lineHeight: 1.4 }}>
+                    {d.doctorStatus === "started" ? "继续带着这张照片问花大夫" : "带这张照片问问花大夫"}
                   </span>
-                  <span style={{ flex: 1, fontSize: 12, color: "var(--terra)", lineHeight: 1.4 }}>{d.concern}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: p.deep, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap" }}>
-                    找花大夫 <Icon name="chevR" size={13} color={p.deep} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--green-deep)", display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap" }}>
+                    去看看 <Icon name="chevR" size={13} color="var(--green-deep)" />
                   </span>
                 </button>
               )}

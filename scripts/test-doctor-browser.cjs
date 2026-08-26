@@ -91,6 +91,51 @@ async function assertNoLayoutFailure(page, consoleErrors) {
   assert.equal(/sk-[A-Za-z0-9]{12,}/.test(html), false, "页面源码疑似暴露 API Key");
 }
 
+async function renderDoctorHandoffCase(page, withObservation) {
+  await page.evaluate((sourceMode) => {
+    const p = window.PLANTS.find(item => item.id === "alv") || window.PLANTS[0];
+    p.isNew = false;
+    p.diagnosisPhoto = "data:image/jpeg;base64,DOCTOR==";
+    const observation = sourceMode ? {
+      id: "observation-source-1",
+      kind: "record",
+      photoData: p.diagnosisPhoto,
+      doctorStatus: "started",
+      comparison: { trend: "worse", summary: "叶尖焦黄范围比上次扩大", health: "watch" },
+    } : null;
+    window.__doctorHandoff = { saved: [], updated: [] };
+    let host = document.getElementById("doctor-handoff-test");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "doctor-handoff-test";
+      Object.assign(host.style, { position: "fixed", inset: "0", zIndex: "9999", background: "white" });
+      document.body.appendChild(host);
+      window.__doctorHandoffRoot = ReactDOM.createRoot(host);
+    }
+    window.__doctorHandoffRoot.render(React.createElement(window.DoctorChat, {
+      key: sourceMode ? "source" : "legacy",
+      go: () => {},
+      plant: p,
+      observation,
+      onSaveEntry: async (_plant, entry) => {
+        window.__doctorHandoff.saved.push(entry);
+        return entry;
+      },
+      onUpdateEntry: async (_plant, entry) => {
+        window.__doctorHandoff.updated.push(entry);
+        return entry;
+      },
+    }));
+  }, withObservation);
+
+  const host = page.locator("#doctor-handoff-test");
+  await host.getByRole("button", { name: "叶片发皱怎么办" }).click();
+  await host.getByText(/我看到了叶片状态/).waitFor();
+  await host.getByRole("button", { name: /结束问诊 · 记入日记/ }).click();
+  await host.getByText(/已记入/).waitFor();
+  return page.evaluate(() => window.__doctorHandoff);
+}
+
 (async () => {
   const browser = await chromium.launch({
     headless: true,
@@ -100,6 +145,17 @@ async function assertNoLayoutFailure(page, consoleErrors) {
     {
       const run = await openCase(browser, { species: "绿萝", confidence: 0.91, matchedIds: [], note: "叶形像绿萝" });
       await run.page.getByText(/认出是 阿绿（绿萝）/).waitFor();
+      const sourceResult = await renderDoctorHandoffCase(run.page, true);
+      assert.equal(sourceResult.updated.length, 1, "来源观察没有被回填");
+      assert.equal(sourceResult.updated[0].id, "observation-source-1", "回填时更换了来源观察 ID");
+      assert.equal(sourceResult.updated[0].doctorStatus, "completed", "来源观察没有标记为 completed");
+      assert.equal(sourceResult.updated[0].diagnosis.conclusion, "可能与盆土偏湿有关");
+      assert.equal(sourceResult.saved.length, 0, "来源观察问诊不应再新增独立诊断");
+
+      const legacyResult = await renderDoctorHandoffCase(run.page, false);
+      assert.equal(legacyResult.updated.length, 0, "旧独立问诊不应更新不存在的来源观察");
+      assert.equal(legacyResult.saved.length, 1, "旧独立问诊路径没有保存诊断记录");
+      assert.equal(legacyResult.saved[0].kind, "diagnosis");
       await assertNoLayoutFailure(run.page, run.consoleErrors);
       await run.context.close();
       console.log("DOCTOR_BROWSER_SINGLE_MATCH_OK");

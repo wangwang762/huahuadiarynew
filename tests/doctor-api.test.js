@@ -6,6 +6,9 @@ const client = fs.readFileSync("doctor-service.js", "utf8");
 const config = fs.readFileSync("doctor-config.js", "utf8");
 const fn = fs.readFileSync("aliyun-functions/flower-doctor/index.js", "utf8");
 const chat = fs.readFileSync("screens-chat.jsx", "utf8");
+const app = fs.readFileSync("app.jsx", "utf8");
+const diary = fs.readFileSync("screens-diary.jsx", "utf8");
+const plant = fs.readFileSync("screens-plant.jsx", "utf8");
 const html = fs.readFileSync("花花日记本.html", "utf8");
 const build = fs.readFileSync("scripts/build-cloudbase.mjs", "utf8");
 
@@ -25,6 +28,18 @@ for (const marker of ["DASHSCOPE_API_KEY", "qwen3-vl-flash", "/chat/completions"
 if (chat.includes("这次约 60ml")) throw new Error("doctor still contains a fabricated network fallback");
 for (const marker of ["window.HHDoctor.reply", "window.HHDoctor.summarize", "summary.symptom", "summary.conclusion"]) {
   if (!chat.includes(marker)) throw new Error(`missing real doctor flow marker: ${marker}`);
+}
+for (const marker of ["observation", "onUpdateEntry", 'doctorStatus: "completed"', "diagnosis: {"]) {
+  if (!chat.includes(marker)) throw new Error(`missing source-observation diagnosis marker: ${marker}`);
+}
+for (const marker of ["observation={top.observation}", "onUpdateEntry={updateEntry}"]) {
+  if (!app.includes(marker)) throw new Error(`missing doctor route handoff marker: ${marker}`);
+}
+for (const marker of ["花大夫补充", "带这张照片问问花大夫", "onDiagnose(p, d)"]) {
+  if (!diary.includes(marker)) throw new Error(`missing observation timeline marker: ${marker}`);
+}
+for (const marker of ["d.photoData", 'go("doctorChat", p, { observation: d })']) {
+  if (!plant.includes(marker)) throw new Error(`missing saved-observation reopen marker: ${marker}`);
 }
 const configPosition = html.indexOf("doctor-config.js");
 const clientPosition = html.indexOf("doctor-service.js");

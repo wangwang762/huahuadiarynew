@@ -231,7 +231,7 @@ window.PlantChat = PlantChat;
 window.CactusChat = PlantChat;
 
 // ---- 花大夫问诊 ----
-function DoctorChat({ go, plant, onSaveEntry }) {
+function DoctorChat({ go, plant, observation, onSaveEntry, onUpdateEntry }) {
   const p = plant || window.PLANTS[0];
   const docAv = <DoctorAvatar size={38} />;
   const recognitionMessage = p.recognitionFailed
@@ -251,7 +251,22 @@ function DoctorChat({ go, plant, onSaveEntry }) {
   async function finishDx(conclusion, messages) {
     const summary = await window.HHDoctor.summarize({ plant: p, image: diagnosisImage, messages });
     if (p.isNew) { go("archiveNew", p, { dx: summary }); return null; }
-    if (onSaveEntry) {
+    if (observation && onUpdateEntry) {
+      await onUpdateEntry(p, {
+        ...observation,
+        doctorStatus: "completed",
+        diagnosis: {
+          symptom: summary.symptom,
+          conclusion: summary.conclusion,
+          plan: summary.plan,
+          points: summary.points,
+          followupDays: summary.followupDays,
+          urgency: summary.urgency,
+          confidence: summary.confidence,
+          completedAt: new Date().toISOString(),
+        },
+      });
+    } else if (onSaveEntry) {
       const entry = window.makeEntry("diagnosis", p, {
         symptom: summary.symptom,
         conclusion: summary.conclusion,
