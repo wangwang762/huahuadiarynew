@@ -87,6 +87,14 @@ function App({ t = {} }) {
     pl.diary.unshift(entry);
     force(n => n + 1);
   }
+  async function updateEntry(pl, entry) {
+    const savedEntry = await window.HHData.updateDiaryEntry(pl.id, entry);
+    const index = (pl.diary || []).findIndex(item => item.id === savedEntry.id);
+    if (index < 0) throw new Error("这篇观察记录还没有保存在日记里");
+    pl.diary.splice(index, 1, savedEntry);
+    force(n => n + 1);
+    return savedEntry;
+  }
 
   if (boot.status !== "ready") {
     return <GardenBootScreen error={boot.status === "error" ? boot.error : ""} onRetry={bootGarden} />;
@@ -107,7 +115,7 @@ function App({ t = {} }) {
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake} onSaveEntry={addEntry} />}
       {top.view === "chat" && <PlantChat go={go} plant={top.plant} />}
-      {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} onSaveEntry={addEntry} />}
+      {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}
       {top.view === "profile" && <ProfileScreen go={go} plant={top.plant} onSave={savePlant} />}
 

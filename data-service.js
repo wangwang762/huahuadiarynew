@@ -269,6 +269,27 @@
     return clone(entry);
   }
 
+  async function updateDiaryEntry(plantId, entry) {
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      const plant = garden.plants.find(item => item.id === plantId);
+      if (!plant) throw new Error("这株植物还没有保存在本地花园里");
+      const index = (plant.diary || []).findIndex(item => item.id === entry.id);
+      if (index < 0) throw new Error("这篇观察记录还没有保存");
+      plant.diary.splice(index, 1, clone(entry));
+      writeGuestGarden(garden);
+      return clone(entry);
+    }
+    if (window.HHCloud.demo) return clone(entry);
+    currentOwnerId();
+    const { id, createdAt, updatedAt, ...entryFields } = entry;
+    const { db } = window.HHCloud.get();
+    throwWriteError(await db.from(TABLES.diaryEntries)
+      .update({ data: clean(entryFields), updated_at: new Date().toISOString() })
+      .eq("id", entry.id).eq("plant_id", plantId));
+    return clone(entry);
+  }
+
   window.HHData = {
     TABLES,
     GUEST_STORAGE_KEY,
@@ -277,5 +298,6 @@
     createPlantWithFirstEntry,
     updatePlant,
     addDiaryEntry,
+    updateDiaryEntry,
   };
 })();

@@ -35,12 +35,26 @@ vm.runInNewContext(source, { window, localStorage, console, JSON, Date, Error })
   await window.HHData.createPlantWithFirstEntry(plant);
   plant.name = "薄荷糖";
   await window.HHData.updatePlant(plant);
-  await window.HHData.addDiaryEntry(plant.id, { id: "entry-2", text: "今天浇水了" });
+  const observation = {
+    id: "entry-2",
+    kind: "record",
+    photoData: "data:image/jpeg;base64,current",
+    comparison: { trend: "worse", health: "watch", previousEntryId: "entry-1" },
+    doctorStatus: "suggested",
+  };
+  await window.HHData.addDiaryEntry(plant.id, observation);
+  await window.HHData.updateDiaryEntry(plant.id, {
+    ...observation,
+    doctorStatus: "completed",
+    diagnosis: { conclusion: "盆土偏湿" },
+  });
 
   const restored = await window.HHData.bootstrap(account);
   if (restored.plants.length !== 1) throw new Error("guest plant was not restored");
   if (restored.plants[0].name !== "薄荷糖") throw new Error("guest plant update was not persisted");
   if (restored.plants[0].diary[0].id !== "entry-2") throw new Error("guest diary entry was not prepended");
+  if (restored.plants[0].diary[0].doctorStatus !== "completed") throw new Error("guest diary update was not persisted");
+  if (restored.plants[0].diary[0].diagnosis.conclusion !== "盆土偏湿") throw new Error("diagnosis was not written back");
   if (cloudCalls !== 0) throw new Error(`guest path called cloud ${cloudCalls} times`);
 
   console.log("GUEST_DATA_SERVICE_OK");

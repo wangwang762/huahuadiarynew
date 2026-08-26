@@ -15,7 +15,7 @@ for (const marker of [
 ]) {
   if (!app.includes(marker)) throw new Error(`missing guest entry marker: ${marker}`);
 }
-for (const marker of ["createPlantWithFirstEntry", "await window.HHData", "addDiaryEntry", "updatePlant"]) {
+for (const marker of ["createPlantWithFirstEntry", "await window.HHData", "addDiaryEntry", "updateDiaryEntry", "updatePlant"]) {
   if (!app.includes(marker)) throw new Error(`missing awaited data-flow marker: ${marker}`);
 }
 for (const marker of ["saving", "saveError", "await onComplete"] ) {

@@ -25,7 +25,7 @@ for (const forbidden of ["DEV_CODE", '"123456"']) {
   if (account.includes(forbidden)) throw new Error(`development OTP remains: ${forbidden}`);
 }
 
-for (const marker of ["profiles", "plants", "diary_entries", "owner_id", ".from(", "createPlantWithFirstEntry", "addDiaryEntry", "updatePlant"]) {
+for (const marker of ["profiles", "plants", "diary_entries", "owner_id", ".from(", "createPlantWithFirstEntry", "addDiaryEntry", "updateDiaryEntry", "updatePlant"]) {
   if (!data.includes(marker)) throw new Error(`missing CloudBase data marker: ${marker}`);
 }
 if (data.includes(".collection(")) throw new Error("PostgreSQL data service must not call the document database");

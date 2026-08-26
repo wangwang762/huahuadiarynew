@@ -530,6 +530,19 @@ window.makeEntry = function (kind, p, payload) {
     quote: payload.quote || ["今天给它拍了张照，状态不错。"],
     voice: payload.voice || "嗯，今天的我还不赖吧？",
     concern: payload.concern || null,   // soft "observed an issue" hook
+    photoData: String(payload.photoData || ""),
+    observedAt: payload.observedAt || new Date().toISOString(),
+    comparison: payload.comparison || {
+      previousEntryId: null,
+      trend: "unknown",
+      summary: "这是第一次观察",
+      health: "watch",
+      observations: [],
+      likelyCause: "暂时无法判断",
+      confidence: 0,
+    },
+    doctorStatus: payload.doctorStatus || "not_needed",
+    diagnosis: payload.diagnosis || null,
     stars: payload.stars || 5,
   };
 };
