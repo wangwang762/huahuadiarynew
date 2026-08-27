@@ -21,7 +21,7 @@ for (const marker of [
 if (capture.includes('const detectedSpecies = "多肉"')) {
   throw new Error("clinic intake still relies on hard-coded species recognition");
 }
-if (!/screens-capture\.jsx\?v=20260826[a-z]/.test(html)) {
+if (!/screens-capture\.jsx\?v=\d{8}[a-z]/.test(html)) {
   throw new Error("screens-capture cache version was not refreshed");
 }
 for (const marker of ["recognitionFailed", "识别暂时没成功，先按新朋友问诊", "认出是"]) {

@@ -90,6 +90,8 @@
 
 html, body {
   margin: 0; padding: 0;
+  width: 100%;
+  min-height: 100%;
   font-family: var(--f-ui);
   color: var(--ink);
   background: #E7D9C4;
@@ -105,6 +107,61 @@ html, body {
   background:
     radial-gradient(120% 90% at 50% 0%, #F1E4D0 0%, #E4D4BD 55%, #DBC8AC 100%);
   padding: 28px 0;
+}
+
+#device-host {
+  position: relative;
+}
+
+.ios-device {
+  --app-safe-top: 0px;
+  --app-safe-bottom: 0px;
+}
+
+@media (max-width: 600px) {
+  html,
+  body {
+    min-height: 100dvh;
+    background: var(--paper);
+    overscroll-behavior: none;
+  }
+
+  .stage {
+    min-height: 100dvh;
+    padding: 0;
+    align-items: stretch;
+    background: var(--paper);
+  }
+
+  #device-host {
+    width: 100%;
+    max-width: 480px;
+    height: 100dvh;
+    margin: 0 auto;
+  }
+
+  .ios-device {
+    --app-safe-top: env(safe-area-inset-top, 0px);
+    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+    width: min(100vw, 480px) !important;
+    max-width: 480px;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .ios-device-chrome {
+    display: none !important;
+  }
+
+  .ios-device-content {
+    padding-top: var(--app-safe-top);
+    padding-bottom: var(--app-safe-bottom);
+  }
+
+  .app-bottom-nav {
+    padding-bottom: calc(14px + var(--app-safe-bottom)) !important;
+  }
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }

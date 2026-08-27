@@ -114,6 +114,7 @@ function App({ t = {} }) {
       {top.view === "onboard" && <Onboard onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
+        initialImage={top.image}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "chat" && <PlantChat go={go} plant={top.plant} />}
       {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} observation={top.observation}

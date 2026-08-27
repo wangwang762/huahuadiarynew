@@ -83,7 +83,7 @@ function BottomNav({ tab, onTab }) {
     { id: "garden", label: "花园", icon: "leaf" },
   ];
   return (
-    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 22,
+    <div className="app-bottom-nav" style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 22,
       display: "flex", justifyContent: "center", pointerEvents: "none",
       background: "linear-gradient(180deg, rgba(241,234,219,0) 0%, var(--paper) 72%)" }}>
       <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 4,

@@ -6,11 +6,49 @@ function PlantDiary({ go, plant, t = {} }) {
   const p = plant;
   const [report, setReport] = useState(false);
   const [filter, setFilter] = useState("all"); // all | record | diagnosis
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const [captureError, setCaptureError] = useState("");
+  const cameraInputRef = useRef(null);
   const recN = p.diary.filter(d => d.kind !== "diagnosis").length;
   const dxN = p.diary.filter(d => d.kind === "diagnosis").length;
   const shown = filter === "all" ? p.diary
     : filter === "diagnosis" ? p.diary.filter(d => d.kind === "diagnosis")
     : p.diary.filter(d => d.kind !== "diagnosis");
+
+  function openCamera() {
+    if (captureBusy || !cameraInputRef.current) return;
+    setCaptureError("");
+    cameraInputRef.current.click();
+  }
+
+  function handleCameraChange(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!String(file.type || "").startsWith("image/")) {
+      input.value = "";
+      setCaptureError("请选择一张植物照片");
+      return;
+    }
+    setCaptureBusy(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = typeof reader.result === "string" ? reader.result : "";
+      input.value = "";
+      setCaptureBusy(false);
+      if (!image.startsWith("data:image/")) {
+        setCaptureError("这张照片没有读取成功，请重新拍一张");
+        return;
+      }
+      go("capture", p, { image: reader.result });
+    };
+    reader.onerror = () => {
+      input.value = "";
+      setCaptureBusy(false);
+      setCaptureError("这张照片没有读取成功，请重新拍一张");
+    };
+    reader.readAsDataURL(file);
+  }
 
   return (
     <div className="noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 40,
@@ -77,11 +115,14 @@ function PlantDiary({ go, plant, t = {} }) {
 
       {/* ===== single main action ===== */}
       <div style={{ padding: "16px 20px 0" }}>
-        <button onClick={() => go("capture", p)} className="btn-green"
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
+          onChange={handleCameraChange} tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
+        <button onClick={openCamera} disabled={captureBusy} className="btn-green"
           style={{ width: "100%", height: 54, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 16.5,
             background: `linear-gradient(180deg, ${p.accent}, ${p.deep})`, boxShadow: `0 8px 20px ${p.accent}4d` }}>
-          <Icon name="camera" size={21} color="#fff" /> 拍照记录今天
+          <Icon name="camera" size={21} color="#fff" /> {captureBusy ? "正在读取照片…" : "拍照记录今天"}
         </button>
+        {captureError && <div role="alert" style={{ marginTop: 8, textAlign: "center", fontSize: 12.5, color: "var(--coral)" }}>{captureError}</div>}
       </div>
 
       {/* ===== diary timeline + filter ===== */}

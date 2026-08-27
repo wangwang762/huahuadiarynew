@@ -2,26 +2,33 @@
    花花日记本 · 拍照记录 → AI 分诊
    主人主动拍照 → AI 判断：状态好（情绪文案记录）/ 需诊断（指路花大夫）
    ============================================================ */
-function CaptureFlow({ go, plant, intake = false, onSaveEntry, onUpdateEntry }) {
+function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry, onUpdateEntry }) {
   const p = plant;
-  const [step, setStep] = useState("shoot"); // shoot | analyzing | identify | good | abnormal
+  const [step, setStep] = useState(!intake && initialImage ? "analyzing" : "shoot"); // shoot | analyzing | identify | good | abnormal
   const [voice, setVoice] = useState("");
   const [saveError, setSaveError] = useState("");
   const [recognition, setRecognition] = useState(null);
   const [recognitionError, setRecognitionError] = useState("");
   const [matchedPlants, setMatchedPlants] = useState([]);
-  const [diagnosisPhoto, setDiagnosisPhoto] = useState("");
+  const [diagnosisPhoto, setDiagnosisPhoto] = useState(initialImage || "");
   const [triageResult, setTriageResult] = useState(null);
   const [triageError, setTriageError] = useState("");
   const [storedPhoto, setStoredPhoto] = useState("");
   const [saveBusy, setSaveBusy] = useState(false);
   const savedObservationRef = useRef(null);
   const savePromiseRef = useRef(null);
+  const autoAnalyzeRef = useRef(false);
   const previousEntry = (p.diary || []).find(entry =>
     entry.kind === "record" && /^data:image\/(?:jpeg|png|webp);base64,/.test(entry.photoData || "")
   ) || null;
 
-  async function analyze() {
+  useEffect(() => {
+    if (intake || !initialImage || autoAnalyzeRef.current) return;
+    autoAnalyzeRef.current = true;
+    analyze(initialImage);
+  }, [initialImage, intake]);
+
+  async function analyze(imageSource = "") {
     setStep("analyzing");
     // clinic walk-in: AI must first work out WHICH plant this is
     if (intake) {
@@ -59,7 +66,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry, onUpdateEntry }) 
       }
       return;
     }
-    const image = await capturePhoto(960, 0.82);
+    const image = imageSource || await capturePhoto(960, 0.82);
     setDiagnosisPhoto(image);
     setTriageError("");
     try {
@@ -250,7 +257,7 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry, onUpdateEntry }) 
         {/* ---- the photo ---- */}
         <div style={{ position: "relative", marginTop: 8 }}>
           <div className="snap" style={{ padding: 8, transform: "rotate(-1.5deg)", borderRadius: 8 }}>
-            <image-slot id={`capture-${p.photoId}`} shape="rounded" radius="5" src={window.photoFor(p.photoId)}
+            <image-slot id={`capture-${p.photoId}`} shape="rounded" radius="5" src={diagnosisPhoto || initialImage || window.photoFor(p.photoId)}
               style={{ width: "210px", height: "250px", display: "block" }} placeholder={`拍下 ${p.name} 现在的样子`}></image-slot>
             <div style={{ textAlign: "center", fontFamily: "var(--f-script)", fontSize: 18, color: "var(--ink-soft)", paddingTop: 4 }}>
               {intake ? "今天 · 6月8日" : `第 ${p.days} 天 · 6月8日`}
@@ -278,18 +285,23 @@ function CaptureFlow({ go, plant, intake = false, onSaveEntry, onUpdateEntry }) 
         )}
 
         {/* ---- step content ---- */}
-        {step === "shoot" && (
+        {step === "shoot" && intake && (
           <div className="soft-fade" style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
             <p className="serif" style={{ fontSize: 15, color: "var(--ink-soft)", textAlign: "center", lineHeight: 1.6, maxWidth: 250 }}>
-              {intake
-                ? <>拍一张它现在的样子，<br />花花先认认它是谁、瞧瞧哪儿不舒服。</>
-                : <>拖入或拍一张{p.name}此刻的照片，<br />花花会看看它今天的状态。</>}
+              拍一张它现在的样子，<br />花花先认认它是谁、瞧瞧哪儿不舒服。
             </p>
             <button onClick={analyze} className="btn-green"
               style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 54, fontSize: 16, display: "flex",
                 alignItems: "center", justifyContent: "center", gap: 9 }}>
-              <Icon name="leaf" size={20} color="#fff" /> {intake ? "让花花认认它" : "让花花看看"}
+              <Icon name="leaf" size={20} color="#fff" /> 让花花认认它
             </button>
+          </div>
+        )}
+
+        {step === "shoot" && !intake && (
+          <div className="soft-fade" style={{ marginTop: 28, width: "100%", textAlign: "center" }}>
+            <div className="serif" style={{ fontSize: 15, color: "var(--ink-soft)" }}>还没有选中照片</div>
+            <button onClick={() => go("back")} className="btn-ghost" style={{ marginTop: 18, width: 180, height: 46 }}>返回重新拍照</button>
           </div>
         )}
 
