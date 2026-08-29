@@ -5,6 +5,7 @@
    ============================================================ */
 function DoctorTab({ go }) {
   const plants = window.PLANTS;
+  const intakePhotoRef = useRef(null);
   const byId = Object.fromEntries(plants.map(p => [p.id, p]));
   // Diagnosis diary entries are the source of truth, so the case wall survives reloads
   // without introducing a second copy of the same medical record.
@@ -28,6 +29,19 @@ function DoctorTab({ go }) {
   const tabs = window.CLINIC_TABS;
   const [tab, setTab] = useState("all");
 
+  function openIntakePhotoPicker() {
+    if (intakePhotoRef.current) intakePhotoRef.current.click();
+  }
+
+  function startIntakeFromPhoto(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => go("capture", window.UNKNOWN_PLANT, { intake: true, image: reader.result });
+    reader.readAsDataURL(file);
+  }
+
   const seenToday = cases.filter(c => c.seen === "今天").length;
   const counts = Object.fromEntries(tabs.map(t => [t.id,
     t.id === "all" ? cases.length : cases.filter(c => c.status === t.id).length]));
@@ -36,8 +50,10 @@ function DoctorTab({ go }) {
   const shown = (tab === "all" ? cases : cases.filter(c => c.status === tab));
 
   return (
-    <div className="noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 100,
+    <div className="noscroll scroll-with-nav" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 100,
       background: "linear-gradient(180deg,#EAF1E6 0%, var(--paper) 22%)" }}>
+      <input ref={intakePhotoRef} type="file" accept="image/*" onChange={startIntakeFromPhoto}
+        aria-label="拍照或从相册选择植物照片" style={{ display: "none" }} />
 
       {/* ===== reception module: intro + 带花看诊 in one card ===== */}
       <div style={{ padding: "56px 20px 0" }}>
@@ -59,7 +75,7 @@ function DoctorTab({ go }) {
             看叶辨症，对症养护。把蔫了、黄了、没精神的花带来，我替你瞧瞧。
           </div>
 
-          <button onClick={() => go("capture", window.UNKNOWN_PLANT, { intake: true })} className="btn-green"
+          <button onClick={openIntakePhotoPicker} className="btn-green"
             style={{ marginTop: 15, width: "100%", height: 50, display: "flex", alignItems: "center",
               justifyContent: "center", gap: 9, fontSize: 16 }}>
             <Icon name="camera" size={20} color="#fff" /> 带一盆花来看诊
@@ -116,7 +132,7 @@ function DoctorTab({ go }) {
               <div className="serif" style={{ marginTop: 7, color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.65 }}>
                 第一份病历还空着，有叶子发黄、打蔫或没精神时，带它来看看。
               </div>
-              <button onClick={() => go("capture", window.UNKNOWN_PLANT, { intake: true })}
+              <button onClick={openIntakePhotoPicker}
                 style={{ marginTop: 17, padding: "10px 18px", borderRadius: "var(--r-pill)",
                   color: "var(--green-deep)", background: "rgba(251,246,235,.72)",
                   border: "1px solid rgba(44,97,71,.24)", fontSize: 13.5, fontWeight: 650 }}>
@@ -146,6 +162,16 @@ function ClinicCaseCard({ c, p, tilt, go }) {
   const patient = p || window.UNKNOWN_PLANT;
   const name = c.patientName || patient.name;
   const species = c.patientSpecies || patient.species;
+  const recheckPhotoRef = useRef(null);
+
+  function startRecheckPhoto(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => go("capture", patient, { image: reader.result });
+    reader.readAsDataURL(file);
+  }
 
   return (
     <div style={{ position: "relative", transform: `rotate(${tilt}deg)` }}>
@@ -239,15 +265,19 @@ function ClinicCaseCard({ c, p, tilt, go }) {
               {c.note}
             </div>
           ) : (
-            <button onClick={() => go(c.status === "recheck" ? "capture" : "doctorChat", patient)}
-              style={{ marginTop: 12, width: "100%", height: 40, borderRadius: "var(--r-pill)",
-                border: "1px solid " + (healed ? "var(--hairline)" : st.color + "55"),
-                background: healed ? "transparent" : st.bg,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                fontSize: 13, fontWeight: 600, color: healed ? "var(--ink-soft)" : st.color }}>
-              {healed ? "查看病历" : c.status === "recheck" ? "拍照复诊" : "继续复查"}
-              <Icon name="chevR" size={15} color={healed ? "var(--ink-soft)" : st.color} />
-            </button>
+            <>
+              <input ref={recheckPhotoRef} type="file" accept="image/*" onChange={startRecheckPhoto}
+                aria-label="拍照复诊" style={{ display: "none" }} />
+              <button onClick={() => c.status === "recheck" ? recheckPhotoRef.current && recheckPhotoRef.current.click() : go("doctorChat", patient)}
+                style={{ marginTop: 12, width: "100%", height: 40, borderRadius: "var(--r-pill)",
+                  border: "1px solid " + (healed ? "var(--hairline)" : st.color + "55"),
+                  background: healed ? "transparent" : st.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  fontSize: 13, fontWeight: 600, color: healed ? "var(--ink-soft)" : st.color }}>
+                {healed ? "查看病历" : c.status === "recheck" ? "拍照复诊" : "继续复查"}
+                <Icon name="chevR" size={15} color={healed ? "var(--ink-soft)" : st.color} />
+              </button>
+            </>
           )}
 
           {/* stamps */}

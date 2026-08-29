@@ -41,6 +41,16 @@ function App({ t = {} }) {
 
   function go(dest, plant, opts) {
     if (dest === "back") { setStack(s => s.length > 1 ? s.slice(0, -1) : s); return; }
+    if (dest === "doctorBack") {
+      setStack(s => {
+        if (s.length <= 1) return s;
+        const withoutChat = s.slice(0, -1);
+        return withoutChat[withoutChat.length - 1] && withoutChat[withoutChat.length - 1].view === "capture"
+          ? withoutChat.slice(0, -1)
+          : withoutChat;
+      });
+      return;
+    }
     if (dest === "home") { setStack([{ view: "diary" }]); return; }
     if (TABS.includes(dest)) { setStack([{ view: dest, plant }]); return; }
     setStack(s => [...s, { view: dest, plant: plant || top.plant, ...(opts || {}) }]);
@@ -57,14 +67,20 @@ function App({ t = {} }) {
     if (existing && existing !== plant) Object.assign(existing, plant);
     setPlants(p => [...p]); force(n => n + 1);
   }
-  async function finishOnboard(newPlant) {
+  async function finishOnboard(newPlant, firstPhoto) {
     if (newPlant) await window.HHData.createPlantWithFirstEntry(newPlant);
     else await window.HHData.setOnboarded(account);
     const updatedAccount = window.HHAccount.markOnboarded();
     if (updatedAccount) setAccount(updatedAccount);
-    if (newPlant) window.PLANTS.unshift(newPlant);
-    setPlants([...window.PLANTS]);
-    setStack(newPlant ? [{ view: "plantDiary", plant: newPlant }] : [{ view: "diary" }]);
+    if (newPlant) {
+      window.PLANTS.unshift(newPlant);
+      setPlants([...window.PLANTS]);
+      setStack(firstPhoto
+        ? [{ view: "capture", plant: newPlant, image: firstPhoto, autoSave: true }]
+        : [{ view: "garden" }]);
+    } else {
+      setStack([{ view: "diary" }]);
+    }
   }
   async function enterGarden(result) {
     const garden = await window.HHData.bootstrap(result.account);
@@ -111,12 +127,12 @@ function App({ t = {} }) {
 
       {/* overlays */}
       {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />}
-      {top.view === "onboard" && <Onboard onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
-      {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} />}
+      {top.view === "onboard" && <Onboard startAtSpecies={!!top.startAtSpecies}
+        onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
+      {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} onSave={savePlant} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
-        initialImage={top.image}
+        initialImage={top.image} autoSave={!!top.autoSave}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
-      {top.view === "chat" && <PlantChat go={go} plant={top.plant} />}
       {top.view === "doctorChat" && <DoctorChat go={go} plant={top.plant} observation={top.observation}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}

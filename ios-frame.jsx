@@ -222,7 +222,7 @@ function IOSDevice({
       {/* nav + content */}
       <div className="ios-device-content" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {title !== undefined && <IOSNavBar title={title} dark={dark} />}
-        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>{children}</div>
         {keyboard && <IOSKeyboard dark={dark} />}
       </div>
       {/* home indicator — always on top */}

@@ -2,20 +2,20 @@
    花花日记本 · 新手引导 — 从空无一物，到第一篇日记
    welcome(空) → 手动选择品类 → 起名+性格 → 注入灵魂(动效) → 第一篇日记
    ============================================================ */
-function Onboard({ onComplete, onSkip }) {
-  const [step, setStep] = useState(0);
-  const [runId] = useState(() => "ob-" + Date.now());
+function Onboard({ onComplete, onSkip, startAtSpecies = false }) {
+  const [step, setStep] = useState(startAtSpecies ? 2 : 0);
   const [sp, setSp] = useState(null);
   const [name, setName] = useState("");
   const [traits, setTraits] = useState([]);
   const [opener, setOpener] = useState("");
+  const [firstPhoto, setFirstPhoto] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const themeSp = sp || window.SPECIES[0];
 
   function pickSpecies(s) {
     setSp(s);
-    setTraits(s.traits.slice(0, 3));
+    setTraits([]);
   }
   function toggleTrait(t) {
     setTraits(ts => ts.includes(t) ? ts.filter(x => x !== t) : (ts.length >= 4 ? ts : [...ts, t]));
@@ -38,23 +38,17 @@ function Onboard({ onComplete, onSkip }) {
       },
       days: 1, mood: "初遇", stars: 5,
       status: "刚住进来", statusTone: "good", photoId: sp.photoId, born: "2026年6月7日",
-      diary: [{
-        id: runId + "-d1", day: "今天", date: new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date()),
-        weather: window.HHWeather ? window.HHWeather.currentLabel() : "🌧 小雨 22°",
-        mood: "初遇", type: "born", photo: sp.photoId,
-        quote: ["第一次见面。它说它叫", { hl: name.trim() || "小绿" }, "，", { grn: "我们的故事从今天开始" }, "。"],
-        voice: firstLine, stars: 5,
-      }],
+      diary: [],
     };
     return p;
   }
 
-  async function completeOnboarding() {
+  async function completeOnboarding(photoOverride = "") {
     if (saving) return;
     setSaving(true);
     setSaveError("");
     try {
-      await onComplete(buildPlant(opener));
+      await onComplete(buildPlant(opener), photoOverride || firstPhoto);
     } catch (error) {
       setSaveError(error && error.message ? error.message : "这篇日记暂时没有写进去，请再试一次");
       setSaving(false);
@@ -75,9 +69,11 @@ function Onboard({ onComplete, onSkip }) {
       )}
       {step === 0 && <ObWelcome sp={themeSp} onNext={() => setStep(2)} onSkip={onSkip} />}
       {step === 2 && <ObSpeciesPicker sp={sp} pickSpecies={pickSpecies} onNext={() => sp && setStep(3)} />}
-      {step === 3 && <ObName sp={sp} name={name} setName={setName} traits={traits} toggleTrait={toggleTrait} onNext={() => setStep(4)} />}
+      {step === 3 && <ObName sp={sp} name={name} setName={setName} traits={traits} toggleTrait={toggleTrait}
+        onBack={() => setStep(2)} onNext={() => setStep(4)} />}
       {step === 4 && <ObGenerate sp={sp} name={name} traits={traits} setOpener={setOpener} onNext={() => setStep(5)} />}
       {step === 5 && <ObReveal sp={sp} name={name} opener={opener}
+        firstPhoto={firstPhoto} onPhoto={setFirstPhoto}
         onDone={completeOnboarding} saving={saving} saveError={saveError} />}
     </div>
   );
@@ -164,7 +160,7 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
         })}
       </div>
 
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "18px 30px 28px",
+      <div className="bottom-action-bar" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "18px 30px 0",
         background: "linear-gradient(180deg, rgba(247,242,232,0), var(--paper) 30%)" }}>
         <button onClick={onNext} disabled={!sp} className="btn-green" style={{ width: "100%", height: 54, fontSize: 16 }}>
           选好了，下一步
@@ -175,10 +171,14 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
 }
 
 /* ---------- 3 · name + personality ---------- */
-function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
+function ObName({ sp, name, setName, traits, toggleTrait, onBack, onNext }) {
   return (
     <div className="soft-fade noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "100px 30px 40px",
       display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <button onClick={onBack} aria-label="返回选择植物" style={{ position: "absolute", top: 54, left: 18,
+        width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-soft)" }}>
+        <Icon name="chevL" size={25} color="var(--ink-soft)" />
+      </button>
       <div style={{ transform: "rotate(-3deg)" }}><PlantAvatar plant={sp} size={98} /></div>
 
       <div style={{ fontFamily: "var(--f-journal)", fontSize: 23, fontWeight: 600, color: "var(--ink)", marginTop: 20 }}>给它起个名字吧</div>
@@ -199,16 +199,18 @@ function ObName({ sp, name, setName, traits, toggleTrait, onNext }) {
           <span style={{ fontSize: 12, color: "var(--ink-faint)" }}>选 2–4 个</span>
         </div>
         <div className="serif" style={{ fontSize: 12.5, color: "var(--ink-faint)", marginTop: 4 }}>性格决定了它跟你说话的方式。</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginTop: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 9, marginTop: 14 }}>
           {sp.traits.map(t => {
             const on = traits.includes(t);
             return (
               <button key={t} onClick={() => toggleTrait(t)} className="badge"
-                style={{ fontSize: 14, padding: "9px 15px",
+                style={{ minWidth: 0, height: 42, fontSize: 13.5, padding: "0 8px",
                   background: on ? "var(--green-grad)" : "rgba(58,53,46,0.05)",
                   color: on ? "#fff" : "var(--ink-faint)", border: on ? "none" : "1px dashed var(--hairline)",
-                  boxShadow: on ? "0 5px 12px rgba(30,70,50,.18)" : "none" }}>
-                {on && <Icon name="check" size={13} color="#fff" />}{t}
+                  boxShadow: on ? "0 5px 12px rgba(30,70,50,.18)" : "none",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                <span aria-hidden="true" style={{ width: 13, height: 13, display: "inline-flex", flexShrink: 0,
+                  opacity: on ? 1 : 0 }}><Icon name="check" size={13} color="#fff" /></span>{t}
               </button>
             );
           })}
@@ -319,7 +321,38 @@ function ObGenerate({ sp, name, traits, setOpener, onNext }) {
 }
 
 /* ---------- 5 · first diary entry reveal ---------- */
-function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
+function ObReveal({ sp, name, opener, firstPhoto, onPhoto, onDone, saving, saveError }) {
+  const photoInputRef = useRef(null);
+  const [photoError, setPhotoError] = useState("");
+
+  function readFirstPhoto(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!String(file.type || "").startsWith("image/")) {
+      setPhotoError("请选择一张植物照片");
+      input.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = typeof reader.result === "string" ? reader.result : "";
+      input.value = "";
+      if (!image.startsWith("data:image/")) {
+        setPhotoError("这张照片没有读取成功，请重新拍一张");
+        return;
+      }
+      setPhotoError("");
+      onPhoto(image);
+      onDone(image);
+    };
+    reader.onerror = () => {
+      input.value = "";
+      setPhotoError("这张照片没有读取成功，请重新拍一张");
+    };
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "0 30px" }}>
@@ -349,7 +382,7 @@ function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
             <div style={{ width: 80, height: 96, borderRadius: 4, overflow: "hidden", background: sp.soft,
               display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
               <image-slot id={`reveal-${sp.photoId}`} shape="rounded" radius="2" transparent-frame=""
-                src={window.cutFor ? window.cutFor(sp.photoId) : window.photoFor(sp.photoId)} fit="contain" position="50% 100%"
+                src={firstPhoto || (window.cutFor ? window.cutFor(sp.photoId) : window.photoFor(sp.photoId))} fit={firstPhoto ? "cover" : "contain"} position="50% 100%"
                 style={{ width: "100%", height: "100%", display: "block", position: "relative",
                   top: window.coverOffsetY ? window.coverOffsetY(sp.photoId) : 0,
                   transform: `scale(${window.coverScale ? window.coverScale(sp.photoId) : 1})`, transformOrigin: "bottom center" }}
@@ -359,12 +392,30 @@ function ObReveal({ sp, name, opener, onDone, saving, saveError }) {
         </div>
       </div>
 
+      <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
+        onChange={readFirstPhoto} tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
+      {!firstPhoto ? (
+        <button onClick={() => photoInputRef.current && photoInputRef.current.click()} className="btn-green"
+          style={{ marginTop: 30, width: "100%", maxWidth: 300, height: 56, fontSize: 17,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Icon name="camera" size={20} color="#fff" /> 拍下第一张照片
+        </button>
+      ) : null}
+      {photoError && <div role="alert" style={{ marginTop: 9, maxWidth: 300, fontSize: 12.5, color: "var(--coral)", textAlign: "center" }}>{photoError}</div>}
       {saveError && <div role="alert" style={{ marginTop: 18, maxWidth: 300, fontSize: 12.5, lineHeight: 1.5, color: "var(--coral)", textAlign: "center" }}>{saveError}</div>}
-      <button onClick={onDone} disabled={saving} className="btn-green" style={{ marginTop: saveError ? 14 : 34, width: "100%", maxWidth: 300, height: 56, fontSize: 17,
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        opacity: saving ? .68 : 1 }}>
-        <Icon name="book" size={20} color="#fff" /> {saving ? "正在收进日记本……" : saveError ? "再试一次" : "打开我们的日记本"}
-      </button>
+      {saving && <div aria-live="polite" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 9,
+        color: "var(--green-deep)", fontFamily: "var(--f-journal)", fontSize: 14.5 }}>
+        <span style={{ display: "inline-flex", gap: 4 }}><i className="dot"></i><i className="dot"></i><i className="dot"></i></span>
+        正在看看它今天的状态…
+      </div>}
+      {firstPhoto && saveError && <button onClick={() => onDone(firstPhoto)} disabled={saving} className="btn-green"
+        style={{ marginTop: 14, width: "100%", maxWidth: 300, height: 52, fontSize: 16 }}>
+        重新分析
+      </button>}
+      {!firstPhoto && <button onClick={onDone} disabled={saving}
+        style={{ marginTop: 16, color: "var(--ink-soft)", fontFamily: "var(--f-journal)", fontSize: 14, padding: "8px 18px" }}>
+        {saving ? "正在进入……" : "暂时跳过"}
+      </button>}
     </div>
   );
 }

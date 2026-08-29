@@ -83,7 +83,7 @@ function BottomNav({ tab, onTab }) {
     { id: "garden", label: "花园", icon: "leaf" },
   ];
   return (
-    <div className="app-bottom-nav" style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 40, paddingBottom: 22, paddingTop: 22,
+    <div className="app-bottom-nav" style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 40, paddingTop: 22,
       display: "flex", justifyContent: "center", pointerEvents: "none",
       background: "linear-gradient(180deg, rgba(241,234,219,0) 0%, var(--paper) 72%)" }}>
       <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 4,
@@ -113,9 +113,10 @@ function Bubble({ from, children, avatar, bb }) {
   const themBorder = (bb && bb.border) || "rgba(0,160,56,0.12)";
   return (
     <div style={{ display: "flex", gap: 9, justifyContent: me ? "flex-end" : "flex-start",
-      alignItems: "flex-end", margin: "10px 0" }}>
-      {!me && avatar}
-      <div style={{
+      alignItems: "flex-start", margin: "10px 0" }}>
+      {!me && <div className="chat-avatar-slot" style={{ flex: "0 0 auto", alignSelf: "flex-start", display: "flex" }}>{avatar}</div>}
+      <div className={me ? "chat-bubble chat-bubble-me" : "chat-bubble chat-bubble-them"} style={{
+        position: "relative",
         maxWidth: "74%",
         background: me ? "var(--green-grad)" : themBg,
         color: me ? "#fff" : "var(--ink)",
@@ -124,11 +125,21 @@ function Bubble({ from, children, avatar, bb }) {
         padding: me ? "11px 15px" : "12px 16px",
         borderRadius: 20,
         borderBottomRightRadius: me ? 6 : 20,
-        borderBottomLeftRadius: me ? 20 : 6,
         boxShadow: "var(--sh-1)",
         border: me ? "none" : `1px solid ${themBorder}`,
         whiteSpace: "pre-wrap",
-      }}>{children}</div>
+      }}>
+        {!me && (
+          <span aria-hidden="true" style={{ position: "absolute", left: -9, top: 11, width: 0, height: 0,
+            borderTop: "8px solid transparent", borderBottom: "8px solid transparent",
+            borderRight: `9px solid ${themBorder}` }}>
+            <span style={{ position: "absolute", left: 2, top: -7, width: 0, height: 0,
+              borderTop: "7px solid transparent", borderBottom: "7px solid transparent",
+              borderRight: `8px solid ${themBg}` }}></span>
+          </span>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
@@ -137,10 +148,17 @@ window.Bubble = Bubble;
 // ---- typing indicator ----
 function Typing({ avatar }) {
   return (
-    <div style={{ display: "flex", gap: 9, alignItems: "flex-end", margin: "10px 0" }}>
-      {avatar}
-      <div style={{ background: "var(--green-bubble)", padding: "13px 16px", borderRadius: 20,
-        borderBottomLeftRadius: 6, display: "flex", gap: 5, border: "1px solid rgba(0,160,56,0.12)" }}>
+    <div style={{ display: "flex", gap: 9, alignItems: "flex-start", margin: "10px 0" }}>
+      <div className="chat-avatar-slot" style={{ flex: "0 0 auto", alignSelf: "flex-start", display: "flex" }}>{avatar}</div>
+      <div className="chat-bubble chat-bubble-them" style={{ position: "relative", background: "var(--green-bubble)", padding: "13px 16px", borderRadius: 20,
+        display: "flex", gap: 5, border: "1px solid rgba(0,160,56,0.12)" }}>
+        <span aria-hidden="true" style={{ position: "absolute", left: -9, top: 11, width: 0, height: 0,
+          borderTop: "8px solid transparent", borderBottom: "8px solid transparent",
+          borderRight: "9px solid rgba(0,160,56,0.12)" }}>
+          <span style={{ position: "absolute", left: 2, top: -7, width: 0, height: 0,
+            borderTop: "7px solid transparent", borderBottom: "7px solid transparent",
+            borderRight: "8px solid var(--green-bubble)" }}></span>
+        </span>
         <span className="dot"></span><span className="dot"></span><span className="dot"></span>
       </div>
     </div>
@@ -219,13 +237,16 @@ window.PlantSprite = PlantSprite;
 
 // ---- round avatar for any flower — real plant cutout on its soul-color tint ----
 function PlantAvatar({ plant, size = 38 }) {
+  const custom = String(plant.avatarData || "");
   const cut = window.cutFor ? window.cutFor(plant.photoId) : "";
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
       background: `radial-gradient(120% 120% at 30% 22%, #fff, ${plant.soft})`,
       boxShadow: `inset 0 0 0 1px ${plant.accent}30`,
       display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      {cut
+      {custom
+        ? <img src={custom} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        : cut
         ? <img src={cut} alt="" style={{ height: size * 0.92, width: "auto", display: "block" }} />
         : <PlantSprite shape={plant.shape} color={plant.deep} pot={plant.pot} h={size * 0.66} />}
     </div>

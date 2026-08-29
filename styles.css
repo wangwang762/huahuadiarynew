@@ -114,40 +114,44 @@ html, body {
 }
 
 .ios-device {
-  --app-safe-top: 0px;
-  --app-safe-bottom: 0px;
+  --app-safe-top: 47px;
+  --app-safe-bottom: 34px;
 }
 
 @media (max-width: 600px) {
   html,
   body {
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
     background: var(--paper);
     overscroll-behavior: none;
   }
 
   .stage {
-    min-height: 100dvh;
+    height: 100%;
     padding: 0;
+    margin: 0;
     align-items: stretch;
-    background: var(--paper);
+    background: transparent;
   }
 
   #device-host {
     width: 100%;
     max-width: 480px;
-    height: 100dvh;
+    height: 100%;
     margin: 0 auto;
+    background: transparent;
   }
 
   .ios-device {
     --app-safe-top: env(safe-area-inset-top, 0px);
     --app-safe-bottom: env(safe-area-inset-bottom, 0px);
-    width: min(100vw, 480px) !important;
+    width: 100% !important;
     max-width: 480px;
-    height: 100dvh !important;
+    height: 100% !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    background: transparent !important;
   }
 
   .ios-device-chrome {
@@ -155,13 +159,50 @@ html, body {
   }
 
   .ios-device-content {
-    padding-top: var(--app-safe-top);
-    padding-bottom: var(--app-safe-bottom);
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    background: transparent !important;
   }
 
-  .app-bottom-nav {
-    padding-bottom: calc(14px + var(--app-safe-bottom)) !important;
+  .collage-login-stage {
+    padding-top: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100% !important;
   }
+
+  .collage-corkboard {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    width: 100vw !important;
+  }
+
+  .collage-field-sheet-back,
+  .collage-field-sheet {
+    top: calc(24px + var(--app-safe-top, 0px)) !important;
+  }
+
+} /* end of media query */
+
+.scroll-with-nav {
+  padding-bottom: calc(110px + var(--app-safe-bottom, 0px)) !important;
+}
+
+.bottom-action-bar {
+  padding-bottom: calc(28px + var(--app-safe-bottom, 0px)) !important;
+}
+
+.chat-input-bar {
+  padding-bottom: calc(30px + var(--app-safe-bottom, 0px)) !important;
+}
+
+.app-bottom-nav {
+  padding-bottom: calc(14px + var(--app-safe-bottom, 0px)) !important;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -1094,7 +1135,13 @@ input, textarea { font-family: inherit; }
 @keyframes foregroundSway { from { transform:rotate(-2deg); } to { transform:rotate(3deg); } }
 
 /* ===== flat full-page garden · original widget language ===== */
-.flat-garden { position:absolute; inset:0; overflow:hidden; color:#52645c; background:#f3f0e8; isolation:isolate; }
+.flat-garden { --cast-x:7px; --cast-y:8px; --cast-blur:7px; --cast-color:rgba(73,57,37,.22); position:absolute; inset:0; overflow:hidden; color:#52645c; background:#f3f0e8; isolation:isolate; }
+.flat-scene-dawn { --cast-x:9px; --cast-y:7px; --cast-blur:9px; --cast-color:rgba(58,55,82,.23); }
+.flat-scene-airy { --cast-x:7px; --cast-y:8px; --cast-blur:6px; --cast-color:rgba(78,61,39,.22); }
+.flat-scene-warm { --cast-x:12px; --cast-y:7px; --cast-blur:8px; --cast-color:rgba(77,43,21,.3); }
+.flat-scene-night { --cast-x:-8px; --cast-y:8px; --cast-blur:10px; --cast-color:rgba(25,22,31,.34); }
+.flat-weather-多云 { --cast-blur:13px; --cast-color:rgba(47,52,50,.13); }
+.flat-weather-小雨 { --cast-blur:15px; --cast-color:rgba(30,42,50,.15); }
 .flat-weather-小雨 { background:#f0f1ec; }.flat-weather-多云 { background:#f1f0e9; }.flat-weather-晴 { background:#f6f1e5; }
 .flat-weather-zone { position:absolute; z-index:1; inset:0 0 auto; height:180px; overflow:hidden; pointer-events:none; }
 .flat-raindrop { position:absolute; top:-22px; width:1.5px; height:18px; border-radius:2px; background:rgba(92,116,132,.38); transform:rotate(8deg); animation:flatGardenRain 1.05s linear infinite; }
@@ -1107,7 +1154,26 @@ input, textarea { font-family: inherit; }
 .garden-wall-art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; }
 .garden-generated-print { position:absolute; z-index:2; top:172px; right:27px; width:70px; height:auto; filter:drop-shadow(0 5px 7px rgba(75,57,31,.12)); transform:rotate(.6deg); }
 .garden-generated-chair { position:absolute; z-index:4; left:-20px; bottom:68px; width:170px; height:auto; filter:drop-shadow(0 8px 7px rgba(79,57,32,.14)); }
-.flat-garden-rack { position:absolute; z-index:3; left:28px; right:28px; top:132px; bottom:105px; }
+.garden-scene-switcher { position:absolute; z-index:12; left:9px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:5px; padding:6px; border-radius:18px; background:rgba(250,247,239,.68); border:1px solid rgba(54,67,57,.13); box-shadow:0 7px 20px rgba(48,39,27,.13); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+.garden-switch-group { display:flex; flex-direction:column; gap:5px; }
+.garden-switch-divider { width:19px; height:1px; margin:1px auto; background:rgba(40,58,47,.16); }
+.garden-scene-switcher button { width:29px; height:29px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:rgba(38,54,44,.62); border:1px solid transparent; transition:transform .16s ease,background .16s ease,color .16s ease; }
+.garden-scene-switcher button span { font:650 11px/1 var(--f-journal); }
+.garden-scene-switcher button.is-active { color:#fff; background:var(--green-deep); box-shadow:0 3px 9px rgba(30,70,50,.25); }
+.garden-scene-switcher button:active { transform:scale(.92); }
+.flat-scene-warm .garden-wall-art,.flat-scene-airy .garden-wall-art,.flat-scene-dawn .garden-wall-art,.flat-scene-night .garden-wall-art { filter:saturate(.88) contrast(.96); }
+.garden-wind-shadows { position:absolute; z-index:2; inset:70px 0 92px; overflow:hidden; pointer-events:none; mix-blend-mode:multiply; opacity:.42; }
+.garden-wind-shadows i { position:absolute; width:190px; height:285px; filter:blur(7px); opacity:.22; transform-origin:50% 100%; animation:gardenShadowBreeze 8.5s ease-in-out infinite alternate; }
+.garden-wind-shadows i::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 17px 35px at 42% 18%,rgba(38,59,38,.65) 0 58%,transparent 62%),radial-gradient(ellipse 16px 31px at 59% 30%,rgba(38,59,38,.58) 0 58%,transparent 62%),radial-gradient(ellipse 18px 37px at 37% 43%,rgba(38,59,38,.57) 0 58%,transparent 62%),radial-gradient(ellipse 15px 30px at 62% 55%,rgba(38,59,38,.52) 0 58%,transparent 62%),linear-gradient(80deg,transparent 48%,rgba(38,59,38,.42) 49% 51%,transparent 52%); }
+.garden-wind-shadows i:first-child { left:-42px; top:54px; transform:rotate(-18deg); }
+.garden-wind-shadows i:last-child { right:-58px; top:185px; transform:rotate(19deg) scale(.82); animation-delay:-4.2s; }
+.flat-scene-night .garden-wind-shadows { opacity:.25; }.flat-weather-小雨 .garden-wind-shadows i { animation-duration:4.8s; }
+.garden-breeze-foreground { position:absolute; z-index:6; inset:0; overflow:hidden; pointer-events:none; }
+.garden-breeze-foreground img { position:absolute; bottom:48px; width:165px; height:auto; opacity:.34; filter:blur(.7px) saturate(.75) brightness(.72); transform-origin:50% 100%; animation:gardenForegroundBreeze 6.8s ease-in-out infinite alternate; }
+.garden-breeze-foreground .breeze-plant-left { left:-92px; transform:rotate(8deg); }
+.garden-breeze-foreground .breeze-plant-right { right:-94px; width:178px; transform:rotate(-7deg) scaleX(-1); animation-delay:-3.4s; }
+.flat-scene-night .garden-breeze-foreground img { opacity:.24; filter:blur(1px) saturate(.62) brightness(.45); }
+.flat-garden-rack { position:absolute; z-index:3; left:64px; right:20px; top:132px; bottom:105px; }
 .flat-garden-tier { position:absolute; z-index:2; left:0; right:0; height:119px; }
 .flat-tier-1 { top:0; }.flat-tier-2 { top:119px; }.flat-tier-3 { top:238px; }.flat-tier-4 { top:357px; }
 .flat-rack-levels-1 .flat-tier-4 { top:287px; }
@@ -1116,22 +1182,22 @@ input, textarea { font-family: inherit; }
 .flat-row-count-1 .flat-garden-plant { width:132px; height:145px; }
 .flat-row-count-1 .flat-garden-plant-art { max-width:128px; }
 .flat-row-count-1 .flat-garden-plant-art img { max-width:128px; }
-.flat-rack-board { position:absolute; z-index:2; left:0; right:0; bottom:0; height:9px; border-radius:2px 2px 1px 1px; background:linear-gradient(180deg,#d2aa75 0%,#bd8952 72%,#a87342 100%); box-shadow:0 5px 7px rgba(90,61,31,.2),inset 0 1px rgba(255,241,213,.5); }
+.flat-rack-board { position:absolute; z-index:2; left:0; right:0; bottom:0; height:9px; border-radius:2px 2px 1px 1px; background:linear-gradient(180deg,#d2aa75 0%,#bd8952 72%,#a87342 100%); box-shadow:var(--cast-x) var(--cast-y) calc(var(--cast-blur) + 2px) var(--cast-color),inset 0 1px rgba(255,241,213,.5); }
 .flat-rack-board::before { content:""; position:absolute; z-index:2; left:2px; right:2px; top:-5px; height:6px; clip-path:polygon(1% 100%,99% 100%,97.5% 0,2.5% 0); background:linear-gradient(180deg,#edd2aa,#d8af78); }
 .flat-rack-board::after { content:""; position:absolute; z-index:-1; left:8px; right:5px; top:8px; height:11px; background:linear-gradient(180deg,rgba(73,48,26,.2),transparent); filter:blur(3px); transform:translateY(2px); }
-.flat-shelf-braces { position:absolute; z-index:1; left:0; right:0; bottom:-34px; height:36px; pointer-events:none; opacity:.58; }
-.flat-shelf-braces i { position:absolute; top:0; width:4px; height:31px; border-radius:0 0 2px 2px; background:#b88452; }
-.flat-shelf-braces i:first-child { left:23%; }.flat-shelf-braces i:last-child { right:23%; }
-.flat-shelf-braces i::after { content:""; position:absolute; left:2px; bottom:2px; width:38px; height:4px; border-radius:3px; background:#b88452; transform:rotate(-38deg); transform-origin:left center; }
-.flat-shelf-braces i:last-child::after { left:auto; right:2px; transform:rotate(38deg); transform-origin:right center; }
+.flat-shelf-braces { position:absolute; z-index:1; left:0; right:0; bottom:-17px; height:18px; pointer-events:none; opacity:.42; }
+.flat-shelf-braces i { position:absolute; top:0; width:13px; height:16px; border-radius:0 0 3px 3px; background:linear-gradient(90deg,#a97749,#c69a68 48%,#9d6c40); box-shadow:inset 1px 0 rgba(255,232,198,.35),2px 2px 3px rgba(85,57,31,.11); }
+.flat-shelf-braces i:first-child { left:24%; }.flat-shelf-braces i:last-child { right:24%; }
+.flat-shelf-braces i::after { content:""; position:absolute; left:50%; bottom:4px; width:2px; height:2px; border-radius:50%; background:rgba(90,58,31,.42); transform:translateX(-50%); box-shadow:0 -6px rgba(90,58,31,.3); }
 .flat-garden-plant { width:100%; height:90px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; animation:flatPlantIn .5s cubic-bezier(.2,.75,.25,1) var(--plant-delay) both; }
 .flat-garden-plant-art { display:flex; align-items:flex-end; justify-content:center; max-width:58px; position:relative; z-index:2; }
 .flat-garden-plant-art::after { content:""; position:absolute; z-index:-1; bottom:-4px; width:60px; height:9px; border-radius:50%; background:radial-gradient(ellipse,rgba(62,43,24,.4) 0%,rgba(80,54,29,.18) 52%,transparent 76%); filter:blur(1.4px); transform:scaleY(.55); }
-.flat-garden-sway-cut { position:relative; display:block; height:100%; transform:translateY(7px); }
+.flat-garden-sway-cut { position:relative; display:block; height:100%; transform:translateY(-1px); filter:drop-shadow(var(--cast-x) var(--cast-y) var(--cast-blur) var(--cast-color)); }
 .flat-garden-plant-art img { display:block; height:100%; width:auto; max-width:60px; object-fit:contain; object-position:bottom; }
 .flat-garden-plant-art .flat-plant-body { transform-origin:50% 64%; animation:flatPlantSway 3.6s ease-in-out calc(var(--plant-delay) * -4) infinite alternate; }
 .flat-weather-多云 .flat-garden-plant-art .flat-plant-body { animation-name:cloudyPlantSway; animation-duration:4.2s; }
 .flat-weather-小雨 .flat-garden-plant-art .flat-plant-body { animation-name:rainPlantGust; animation-duration:2.8s; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+.flat-weather-多云 .flat-garden-plant-art::after { opacity:.58; }.flat-weather-小雨 .flat-garden-plant-art::after { opacity:.44; }
 .flat-garden-plant-art .flat-plant-pot { position:absolute; inset:0 auto auto 0; clip-path:inset(64% 0 0 0); -webkit-clip-path:inset(64% 0 0 0); }
 .garden-visitor { position:absolute; z-index:7; left:0; top:0; width:28px; height:28px; opacity:0; pointer-events:none; will-change:transform,opacity; }
 .garden-visitor svg { width:100%; height:100%; overflow:visible; }.visitor-bird { width:32px; height:25px; }
@@ -1147,9 +1213,11 @@ input, textarea { font-family: inherit; }
 @keyframes flatPlantSway { from { transform:rotate(-.8deg); } to { transform:rotate(.8deg); } }
 @keyframes cloudyPlantSway { from { transform:rotate(-1.25deg); } to { transform:rotate(1.25deg); } }
 @keyframes rainPlantGust { 0%,100% { transform:rotate(-1deg); } 18% { transform:rotate(3.8deg); } 36% { transform:rotate(1.7deg); } 55% { transform:rotate(-3.1deg); } 73% { transform:rotate(-.7deg); } 84% { transform:rotate(2.2deg); } }
+@keyframes gardenShadowBreeze { from { translate:-5px 2px; rotate:-2deg; scale:.98; } 45% { translate:4px -2px; rotate:1.5deg; scale:1.01; } to { translate:11px 3px; rotate:3deg; scale:1.03; } }
+@keyframes gardenForegroundBreeze { from { translate:-2px 1px; rotate:-1.4deg; } to { translate:5px -1px; rotate:1.8deg; } }
 @keyframes visitorBeeWing { from { transform:scaleY(.35) rotate(-8deg); } to { transform:scaleY(1) rotate(7deg); } }
 @keyframes visitorBirdWing { from { transform:rotate(8deg); } to { transform:rotate(-24deg); } }
-@media (prefers-reduced-motion:reduce) { .garden-visitor { display:none; }.flat-garden-plant-art .flat-plant-body { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .garden-visitor { display:none; }.flat-garden-plant-art .flat-plant-body,.garden-wind-shadows i,.garden-breeze-foreground img { animation:none; } }
 
 /* ===== title treatments ===== */
 .app-title-light { font-family: var(--f-journal); font-weight: 500; font-size: 33px; letter-spacing: 2px; color: var(--ink); }

@@ -12,6 +12,7 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
   const [typing, setTyping] = useState(false);
   const [showQuicks, setShowQuicks] = useState(true);
   const [finished, setFinished] = useState(null);  // diagnosis summary, set when user ends consult
+  const [finishing, setFinishing] = useState(false);
   const [serviceError, setServiceError] = useState("");
   const scrollRef = useRef(null);
   const firedFirst = useRef(false);
@@ -55,6 +56,21 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
     if (!firedFirst.current && onFirstReply) { firedFirst.current = true; onFirstReply(); }
   }
 
+  async function finishConsult() {
+    if (finishing || typing || finished) return;
+    const conclusion = [...convo].reverse().find(m => m.role === "assistant")?.content || opener;
+    setServiceError("");
+    setFinishing(true);
+    try {
+      const sum = await onFinishDx(conclusion, [{ role: "assistant", content: opener }, ...convo]);
+      if (sum) setFinished(sum);
+    } catch (e) {
+      setServiceError(e && e.message ? e.message : "病历没有整理成功，请稍后重试");
+    } finally {
+      setFinishing(false);
+    }
+  }
+
   const docAv = <DoctorAvatar size={36} />;
   const avatar = accentDoctor ? docAv : (avatarProp || <CactusAvatar size={36} />);
   const bb = { bg: bubbleBg, border: bubbleBorder };
@@ -68,7 +84,8 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
         borderBottom: "1px solid var(--hairline)", display: "flex", alignItems: "center",
         padding: "54px 14px 12px", gap: 10, zIndex: 10 }}>
-        <button onClick={() => go("back")} style={{ padding: 4, display: "flex" }}>
+        <button onClick={() => go(accentDoctor ? "doctorBack" : "back")} aria-label="返回上一页"
+          style={{ padding: 4, display: "flex" }}>
           <Icon name="chevL" size={26} color="var(--ink-soft)" />
         </button>
         {headerAvatar}
@@ -92,25 +109,6 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         {serviceError && <div role="alert" style={{ margin: "6px 0 12px 45px", padding: "10px 12px",
           borderRadius: 12, background: "rgba(200,85,60,.08)", border: "1px solid rgba(200,85,60,.16)",
           color: "var(--coral)", fontSize: 12.5, lineHeight: 1.5 }}>{serviceError}。这次没有生成诊断建议。</div>}
-        {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && !finished && (
-          <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 12px" }}>
-            <button onClick={async () => {
-                const conclusion = [...convo].reverse().find(m => m.role === "assistant")?.content || opener;
-                setServiceError("");
-                try {
-                  const sum = await onFinishDx(conclusion, [{ role: "assistant", content: opener }, ...convo]);
-                  if (sum) setFinished(sum);
-                } catch (e) {
-                  setServiceError(e && e.message ? e.message : "病历没有整理成功，请稍后重试");
-                }
-              }}
-              style={{ height: 36, padding: "0 16px", fontSize: 13, color: "var(--green-deep)", fontWeight: 600,
-                background: "var(--green-soft)", border: "1.5px solid var(--green)", borderRadius: "var(--r-pill)",
-                display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--f-journal)" }}>
-              <Icon name="check" size={14} color="var(--green-deep)" stroke={2.4} /> {finishLabel || "结束问诊 · 记入日记"}
-            </button>
-          </div>
-        )}
         {finished && <DiagnosisSummaryCard summary={finished} onView={() => go("home")} />}
       </div>
 
@@ -126,17 +124,35 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         </div>
       )}
 
+      {/* compact consult action — anchored to the composer instead of interrupting the conversation */}
+      {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && !finished && (
+        <div style={{ display: "flex", justifyContent: "center", margin: "0 0 -7px", position: "relative", zIndex: 12 }}>
+          <button onClick={finishConsult} disabled={finishing}
+            aria-busy={finishing ? "true" : "false"}
+            style={{ height: 34, padding: "0 15px", fontSize: 12.5, color: "var(--green-deep)", fontWeight: 650,
+              background: "rgba(237,244,229,.96)", border: "1.5px solid var(--green)", borderRadius: "var(--r-pill)",
+              boxShadow: "0 5px 14px rgba(30,70,50,.12)", display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: "var(--f-journal)", opacity: finishing ? .78 : 1 }}>
+            {finishing ? <span aria-hidden="true" style={{ display: "inline-flex", gap: 3 }}>
+              {[0,1,2].map(i => <i key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--green-deep)",
+                animation: `typing 1s ${i * .14}s ease-in-out infinite` }}></i>)}
+            </span> : <Icon name="check" size={14} color="var(--green-deep)" stroke={2.4} />}
+            {finishing ? "正在整理这次问诊…" : (finishLabel || "结束问诊 · 记入日记")}
+          </button>
+        </div>
+      )}
+
       {/* input — hidden once consult is wrapped up */}
       {!finished && (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 30px",
+      <div className="chat-input-bar" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 0",
         background: "var(--glass-strong)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
         borderTop: "1px solid var(--hairline)" }}>
-        <input value={draft} onChange={e => setDraft(e.target.value)}
+        <input value={draft} onChange={e => setDraft(e.target.value)} disabled={finishing}
           onKeyDown={e => { if (e.key === "Enter") send(); }}
           placeholder={placeholder || (accentDoctor ? "继续追问花大夫…" : "说点什么…")}
           style={{ flex: 1, height: 46, borderRadius: "var(--r-pill)", border: "1px solid var(--hairline)",
             background: "#fff", padding: "0 18px", fontSize: 15, color: "var(--ink)", outline: "none" }} />
-        <button onClick={() => send()} className="btn-green"
+        <button onClick={() => send()} disabled={finishing} className="btn-green"
           style={{ width: 46, height: 46, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
             background: sendGrad || "var(--green-grad)" }}>
           <Icon name="send" size={20} color="#fff" />
@@ -203,34 +219,6 @@ function CarePlanCard({ name }) {
     </div>
   );
 }
-
-// ---- 与任一花对话 ----
-function PlantChat({ go, plant }) {
-  const p = plant || window.PLANTS[0];
-  const quickMap = {
-    ciji: ["我有点想你了", "今天给你浇水好不好？", "你今天好看吗", "我出差了几天，对不起"],
-    tuanzi: ["冷不冷呀？", "我把你搬到窗边啦", "今天想我了吗", "要浇水吗？"],
-    alv: ["今天又长新叶了？", "谢谢你鼓励我", "你真好养", "给我加点油吧"],
-    laobei: ["你又在观察谁了", "多肉真的浇多了吗", "给我出个主意", "你是不是该换盆了"],
-    zhaozhao: ["今天太阳好吗", "你总是那么乐观", "我最近有点丧", "陪我晒会太阳"],
-  };
-  return (
-    <ChatBase go={go}
-      title={p.name}
-      subtitle={`${p.species} · ${p.tagsOn.join("，")}`}
-      headerAvatar={<PlantAvatar plant={p} size={38} />}
-      avatar={<PlantAvatar plant={p} size={36} />}
-      bubbleBg={p.bubble} bubbleBorder={`${p.accent}26`} sendGrad={`linear-gradient(180deg, ${p.accent}, ${p.deep})`}
-      systemPrompt={window.systemPromptFor(p)}
-      opener={p.opener}
-      placeholder={`对${p.name}说点什么…`}
-      quicks={quickMap[p.id] || ["你今天怎么样？", "想你了", "需要浇水吗"]}
-    />
-  );
-}
-window.PlantChat = PlantChat;
-// back-compat alias
-window.CactusChat = PlantChat;
 
 // ---- 花大夫问诊 ----
 function DoctorChat({ go, plant, observation, onSaveEntry, onUpdateEntry }) {
