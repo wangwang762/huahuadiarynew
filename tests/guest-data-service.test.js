@@ -55,6 +55,10 @@ vm.runInNewContext(source, { window, localStorage, console, JSON, Date, Error })
   if (restored.plants[0].diary[0].id !== "entry-2") throw new Error("guest diary entry was not prepended");
   if (restored.plants[0].diary[0].doctorStatus !== "completed") throw new Error("guest diary update was not persisted");
   if (restored.plants[0].diary[0].diagnosis.conclusion !== "盆土偏湿") throw new Error("diagnosis was not written back");
+  const snapshot = window.HHData.guestGardenSnapshot();
+  snapshot.plants[0].name = "不应该改到存储里";
+  if (window.HHData.guestGardenSnapshot().plants[0].name !== "薄荷糖") throw new Error("guest snapshot leaked mutable storage state");
+  if (typeof window.HHData.migrateGuestGarden !== "function") throw new Error("guest migration API is missing");
   if (cloudCalls !== 0) throw new Error(`guest path called cloud ${cloudCalls} times`);
 
   console.log("GUEST_DATA_SERVICE_OK");

@@ -4,6 +4,25 @@
    ============================================================ */
 const TABS = ["diary", "doctor", "garden"];
 
+function hasStartedGarden(garden) {
+  return !!(garden && garden.profile && garden.profile.onboarded)
+    || !!(garden && Array.isArray(garden.plants) && garden.plants.length);
+}
+
+function collapseDuplicateObservations(plants) {
+  return (plants || []).map(plant => {
+    const seen = [];
+    const diary = (plant.diary || []).filter(entry => {
+      if (entry.kind !== "record" || !entry.photoData) return true;
+      const at = Date.parse(entry.observedAt || entry.createdAt || 0) || 0;
+      const duplicate = seen.some(item => item.photoData === entry.photoData && (!at || !item.at || Math.abs(item.at - at) < 10 * 60 * 1000));
+      if (!duplicate) seen.push({ photoData: entry.photoData, at });
+      return !duplicate;
+    });
+    return diary.length === (plant.diary || []).length ? plant : { ...plant, diary };
+  });
+}
+
 function App({ t = {} }) {
   const [, force] = useState(0);
   const [, setPlants] = useState([]);
@@ -29,9 +48,12 @@ function App({ t = {} }) {
         return;
       }
       const garden = await window.HHData.bootstrap(restored);
-      const hydrated = { ...restored, onboarded: !!(garden.profile && garden.profile.onboarded) };
+      const hydrated = { ...restored, onboarded: hasStartedGarden(garden) };
       setAccount(hydrated);
-      setPlants([...garden.plants]);
+      const plants = collapseDuplicateObservations(garden.plants);
+      window.PLANTS = plants;
+      window.CACTUS = plants[0] || null;
+      setPlants([...plants]);
       setStack([{ view: hydrated.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard" }]);
       setBoot({ status: "ready", error: "" });
     } catch (error) {
@@ -52,6 +74,10 @@ function App({ t = {} }) {
       return;
     }
     if (dest === "home") { setStack([{ view: "diary" }]); return; }
+    if (dest === "plantDiary" && opts && opts.returnHome) {
+      setStack([{ view: "diary" }, { view: "plantDiary", plant }]);
+      return;
+    }
     if (TABS.includes(dest)) { setStack([{ view: dest, plant }]); return; }
     setStack(s => [...s, { view: dest, plant: plant || top.plant, ...(opts || {}) }]);
   }
@@ -67,7 +93,37 @@ function App({ t = {} }) {
     if (existing && existing !== plant) Object.assign(existing, plant);
     setPlants(p => [...p]); force(n => n + 1);
   }
+  async function deletePlant(plant) {
+    await window.HHData.deletePlant(plant.id);
+    window.PLANTS = window.PLANTS.filter(item => item.id !== plant.id);
+    window.CACTUS = window.PLANTS[0] || null;
+    setPlants([...window.PLANTS]);
+    setStack(current => [{ view: TABS.includes(current[0] && current[0].view) ? current[0].view : "diary" }]);
+  }
+  async function signOut() {
+    await window.HHAccount.signOut();
+    window.PLANTS = [];
+    window.CACTUS = null;
+    setPlants([]);
+    setAccount(null);
+    setStack([{ view: "email" }]);
+    if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
+      const cleanEntry = `${window.location.origin}${window.location.pathname}?signedout=${Date.now()}`;
+      setTimeout(() => window.location.replace(cleanEntry), 30);
+    }
+  }
+  function openAccount() {
+    if (account && !account.guest) {
+      go("account");
+      return;
+    }
+    setStack([{ view: "email" }]);
+  }
   async function finishOnboard(newPlant, firstPhoto) {
+    const validFirstPhoto = typeof firstPhoto === "string"
+      && /^data:image\/(?:jpeg|png|webp|heic|heif);base64,/i.test(firstPhoto)
+      ? firstPhoto
+      : "";
     if (newPlant) await window.HHData.createPlantWithFirstEntry(newPlant);
     else await window.HHData.setOnboarded(account);
     const updatedAccount = window.HHAccount.markOnboarded();
@@ -75,16 +131,16 @@ function App({ t = {} }) {
     if (newPlant) {
       window.PLANTS.unshift(newPlant);
       setPlants([...window.PLANTS]);
-      setStack(firstPhoto
-        ? [{ view: "capture", plant: newPlant, image: firstPhoto, autoSave: true }]
-        : [{ view: "garden" }]);
+      setStack(validFirstPhoto
+        ? [{ view: "diary" }, { view: "capture", plant: newPlant, image: validFirstPhoto, autoSave: true }]
+        : [{ view: "diary" }]);
     } else {
       setStack([{ view: "diary" }]);
     }
   }
   async function enterGarden(result) {
-    const garden = await window.HHData.bootstrap(result.account);
-    const hydrated = { ...result.account, onboarded: !!(garden.profile && garden.profile.onboarded) };
+    const garden = await window.HHData.migrateGuestGarden(result.account);
+    const hydrated = { ...result.account, onboarded: hasStartedGarden(garden) };
     setAccount(hydrated);
     setPlants([...garden.plants]);
     const next = hydrated.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard";
@@ -93,15 +149,23 @@ function App({ t = {} }) {
   async function enterGuestGarden() {
     const guestAccount = { id: "guest-local", email: "", guest: true, onboarded: false };
     const garden = await window.HHData.bootstrap(guestAccount);
-    const hydrated = { ...guestAccount, onboarded: !!(garden.profile && garden.profile.onboarded) };
+    const hydrated = { ...guestAccount, onboarded: hasStartedGarden(garden) };
     setAccount(hydrated);
     setPlants([...garden.plants]);
-    setStack([{ view: "onboard" }]);
+    setStack([{ view: hydrated.onboarded ? "diary" : "onboard" }]);
   }
   async function addEntry(pl, entry) {
+    const duplicate = entry.kind === "record" && entry.photoData && (pl.diary || []).find(existing => {
+      if (existing.kind !== "record" || existing.photoData !== entry.photoData) return false;
+      const existingAt = Date.parse(existing.observedAt || existing.createdAt || 0) || 0;
+      const nextAt = Date.parse(entry.observedAt || entry.createdAt || 0) || 0;
+      return !existingAt || !nextAt || Math.abs(existingAt - nextAt) < 10 * 60 * 1000;
+    });
+    if (duplicate) return duplicate;
     await window.HHData.addDiaryEntry(pl.id, entry);
     pl.diary.unshift(entry);
     force(n => n + 1);
+    return entry;
   }
   async function updateEntry(pl, entry) {
     const savedEntry = await window.HHData.updateDiaryEntry(pl.id, entry);
@@ -121,7 +185,8 @@ function App({ t = {} }) {
   return (
     <div className="canvas">
       {/* base tab (hidden under overlays) */}
-      {!isOverlay && baseTab === "diary" && <DiaryHome go={go} t={t} />}
+      {!isOverlay && baseTab === "diary" && <DiaryHome go={go} t={t}
+        onAccount={openAccount} />}
       {!isOverlay && baseTab === "doctor" && <DoctorTab go={go} />}
       {!isOverlay && baseTab === "garden" && <GardenScreen go={go} />}
 
@@ -129,7 +194,8 @@ function App({ t = {} }) {
       {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />}
       {top.view === "onboard" && <Onboard startAtSpecies={!!top.startAtSpecies}
         onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
-      {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} onSave={savePlant} />}
+      {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} onSave={savePlant}
+        returnLabel={baseTab === "garden" ? "花园" : "日记本"} />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
         initialImage={top.image} autoSave={!!top.autoSave}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
@@ -137,6 +203,8 @@ function App({ t = {} }) {
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}
       {top.view === "profile" && <ProfileScreen go={go} plant={top.plant} onSave={savePlant} />}
+      {top.view === "deletePlant" && <PlantDeleteConfirm plant={top.plant} onCancel={() => go("back")} onDelete={deletePlant} />}
+      {top.view === "account" && <AccountScreen go={go} account={account} plantCount={window.PLANTS.length} onSignOut={signOut} />}
 
       {!isOverlay && <BottomNav tab={baseTab} onTab={go} />}
     </div>

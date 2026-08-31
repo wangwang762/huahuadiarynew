@@ -2,13 +2,17 @@
    花花日记本 · 某盆花的日记详情（点封面进入）
    日记封面 hero + 这盆花的时间线
    ============================================================ */
-function PlantDiary({ go, plant, t = {} }) {
+function PlantDiary({ go, plant, t = {}, onSave, returnLabel = "日记本" }) {
   const p = plant;
   const [report, setReport] = useState(false);
   const [filter, setFilter] = useState("all"); // all | record | diagnosis
+  const [compactNav, setCompactNav] = useState(false);
   const [captureBusy, setCaptureBusy] = useState(false);
   const [captureError, setCaptureError] = useState("");
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
   const cameraInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
   const recN = p.diary.filter(d => d.kind !== "diagnosis").length;
   const dxN = p.diary.filter(d => d.kind === "diagnosis").length;
   const shown = filter === "all" ? p.diary
@@ -50,41 +54,100 @@ function PlantDiary({ go, plant, t = {} }) {
     reader.readAsDataURL(file);
   }
 
+  async function handleAvatarChange(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    input.value = "";
+    if (!String(file.type || "").startsWith("image/")) {
+      setAvatarError("请选择一张植物照片");
+      return;
+    }
+    setAvatarBusy(true);
+    setAvatarError("");
+    try {
+      const bitmap = await createImageBitmap(file);
+      const edge = Math.min(bitmap.width, bitmap.height);
+      const sx = Math.max(0, Math.round((bitmap.width - edge) / 2));
+      const sy = Math.max(0, Math.round((bitmap.height - edge) / 2));
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#F7F3E8";
+      context.fillRect(0, 0, 512, 512);
+      context.drawImage(bitmap, sx, sy, edge, edge, 0, 0, 512, 512);
+      bitmap.close();
+      const avatarData = canvas.toDataURL("image/jpeg", 0.82);
+      p.avatarData = avatarData;
+      if (onSave) await onSave({ ...p, avatarData });
+    } catch (error) {
+      setAvatarError(error && error.message ? `头像没有保存成功：${error.message}` : "头像没有保存成功，请重新选择");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   return (
-    <div className="noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 40,
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden",
       background: `linear-gradient(180deg, ${p.soft}66 0%, var(--paper) 24%)` }}>
+      <div className="noscroll" onScroll={event => setCompactNav(event.currentTarget.scrollTop > 118)}
+        style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 126 }}>
       {/* nav */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "54px 16px 6px" }}>
-        <button onClick={() => go("home")} style={{ display: "flex", alignItems: "center", gap: 2, color: "var(--ink-soft)" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", alignItems: "center", justifyContent: "space-between",
+        minHeight: 94, padding: "54px 16px 6px", boxSizing: "border-box",
+        background: compactNav ? "rgba(248,244,234,.91)" : "transparent",
+        backdropFilter: compactNav ? "blur(14px)" : "none", WebkitBackdropFilter: compactNav ? "blur(14px)" : "none",
+        borderBottom: compactNav ? "1px solid rgba(84,73,54,.08)" : "1px solid transparent",
+        transition: "background .24s ease, border-color .24s ease" }}>
+        <button onClick={() => go("back")} style={{ display: "flex", alignItems: "center", gap: 2, color: "var(--ink-soft)" }}>
           <Icon name="chevL" size={26} color="var(--ink-soft)" />
-          <span style={{ fontSize: 15, fontFamily: "var(--f-journal)" }}>日记本</span>
+          <span style={{ fontSize: 15, fontFamily: "var(--f-journal)" }}>{returnLabel}</span>
         </button>
-        <button onClick={() => setReport(true)} aria-label="生成成长小报"
+        <div aria-live="polite" style={{ position: "absolute", left: "50%", bottom: 12, transform: `translate(-50%, ${compactNav ? 0 : 5}px)`,
+          maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 650, color: "var(--ink)",
+          opacity: compactNav ? 1 : 0, transition: "opacity .2s ease, transform .2s ease", pointerEvents: "none" }}>
+          {p.name}
+        </div>
+        <button onClick={() => window.reportPhotos(p).length ? setReport(true) : openCamera()} aria-label="生成成长小报"
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 999,
-            background: p.deep, color: "#fff", boxShadow: `0 4px 12px ${p.accent}44` }}>
+            background: "var(--green-grad)", color: "#fff", boxShadow: "0 4px 12px rgba(30,70,50,.24)" }}>
           <Icon name="share" size={15} color="#fff" />
           <span style={{ fontSize: 13, fontWeight: 600 }}>成长小报</span>
         </button>
       </div>
 
       {/* ===== plant intro: photo + name + stats + traits ===== */}
-      <div className="glass-card rise" style={{ margin: "8px 20px 0", padding: 14, display: "flex", gap: 14 }}>
+      <div className="glass-card rise" style={{ margin: "8px 20px 0", padding: "14px 14px 0", overflow: "hidden" }}>
+        <div style={{ display: "flex", gap: 14 }}>
         {/* polaroid */}
-        <div className="snap" style={{ width: 104, flexShrink: 0, transform: "rotate(-2.5deg)", alignSelf: "flex-start" }}>
-          <image-slot id={`detail-${p.photoId}`} shape="rounded" radius="4" src={window.photoFor(p.photoId)}
-            style={{ width: "94px", height: "112px", display: "block" }} placeholder={p.name}></image-slot>
+        <button onClick={() => avatarInputRef.current && avatarInputRef.current.click()} disabled={avatarBusy}
+          aria-label={`更换${p.name}的头像`} className="snap"
+          style={{ width: 104, flexShrink: 0, transform: "rotate(-2.5deg)", alignSelf: "flex-start", position: "relative", padding: 5 }}>
+          <image-slot id={`detail-${p.photoId}`} shape="rounded" radius="4"
+            src={p.avatarData || (window.cutFor ? window.cutFor(p.photoId) : "") || window.photoFor(p.photoId)}
+            fit={p.avatarData ? "cover" : "contain"} position="50% 100%" transparent-frame={p.avatarData ? undefined : ""}
+            style={{ width: "94px", height: "112px", display: "block", background: `linear-gradient(180deg,#FBF7EF,${p.soft})` }} placeholder={p.name}></image-slot>
+          <span aria-hidden="true" style={{ position: "absolute", right: 8, bottom: 25, width: 26, height: 26, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(251,246,238,.94)",
+            border: "1px solid var(--hairline)", boxShadow: "0 3px 8px rgba(58,53,46,.14)" }}>
+            <Icon name={avatarBusy ? "leaf" : "camera"} size={14} color="var(--green-deep)" />
+          </span>
           <div style={{ textAlign: "center", fontFamily: "var(--f-script)", fontSize: 16, color: "var(--ink-soft)", paddingTop: 1 }}>第 {p.days} 天</div>
-        </div>
+        </button>
+        <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarChange}
+          tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
         {/* right: name + stats + tags */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
             <span className="mast" style={{ fontSize: 25 }}>{p.name}</span>
             <span style={{ fontSize: 12, color: "var(--ink-faint)" }}>{p.species}</span>
-            <button onClick={() => go("profile", p)} aria-label="编辑性格"
+            <button onClick={() => go("profile", p)} aria-label={`编辑${p.name}`}
               style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 3, padding: "3px 8px",
                 borderRadius: 999, border: "1px solid var(--hairline)", color: "var(--ink-faint)" }}>
               <Icon name="edit" size={12} color="var(--ink-faint)" />
-              <span style={{ fontSize: 11 }}>性格</span>
+              <span style={{ fontSize: 11 }}>编辑</span>
             </button>
           </div>
           {/* fused stats */}
@@ -95,7 +158,7 @@ function PlantDiary({ go, plant, t = {} }) {
               { n: (p.diary || []).filter(d => d.photo).length + 1, u: "张", l: "拍照" },
             ].map((s, i) => (
               <div key={i}>
-                <div style={{ fontFamily: "var(--f-num)", fontWeight: 700, fontSize: 18, color: p.deep, lineHeight: 1 }}>
+                <div style={{ fontFamily: "var(--f-num)", fontWeight: 700, fontSize: 18, color: "var(--green-deep)", lineHeight: 1 }}>
                   {s.n}<span style={{ fontSize: 10.5, marginLeft: 1, color: "var(--ink-faint)" }}>{s.u}</span></div>
                 <div style={{ fontSize: 10.5, color: "var(--ink-faint)", marginTop: 3 }}>{s.l}</div>
               </div>
@@ -104,26 +167,17 @@ function PlantDiary({ go, plant, t = {} }) {
           {/* trait tags */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "auto", paddingTop: 11 }}>
             {p.tagsOn.map(t => (
-              <span key={t} className="badge" style={{ fontSize: 11, padding: "3px 9px", background: p.bubble, color: p.deep }}>{t}</span>
+              <span key={t} className="badge" style={{ fontSize: 11, padding: "3px 9px", background: "var(--green-soft)", color: "var(--green-deep)" }}>{t}</span>
             ))}
           </div>
         </div>
+        </div>
+        <SelfCareGuide plant={p} embedded />
       </div>
+      {avatarError && <div role="alert" style={{ margin: "8px 24px 0", fontSize: 12.5, color: "var(--coral)", textAlign: "center" }}>{avatarError}</div>}
 
-      {/* ===== first-person care guide (personality + care combined) ===== */}
-      <SelfCareGuide plant={p} />
-
-      {/* ===== single main action ===== */}
-      <div style={{ padding: "16px 20px 0" }}>
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
-          onChange={handleCameraChange} tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
-        <button onClick={openCamera} disabled={captureBusy} className="btn-green"
-          style={{ width: "100%", height: 54, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 16.5,
-            background: `linear-gradient(180deg, ${p.accent}, ${p.deep})`, boxShadow: `0 8px 20px ${p.accent}4d` }}>
-          <Icon name="camera" size={21} color="#fff" /> {captureBusy ? "正在读取照片…" : "拍照记录今天"}
-        </button>
-        {captureError && <div role="alert" style={{ marginTop: 8, textAlign: "center", fontSize: 12.5, color: "var(--coral)" }}>{captureError}</div>}
-      </div>
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
+        onChange={handleCameraChange} tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
 
       {/* ===== diary timeline + filter ===== */}
       <div style={{ padding: "22px 22px 4px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -136,7 +190,7 @@ function PlantDiary({ go, plant, t = {} }) {
           return (
             <button key={id} onClick={() => setFilter(id)}
               style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 999, whiteSpace: "nowrap",
-                background: on ? p.deep : "transparent", border: on ? `1px solid ${p.deep}` : "1px solid var(--hairline)" }}>
+                background: on ? "var(--green-deep)" : "transparent", border: on ? "1px solid var(--green-deep)" : "1px solid var(--hairline)" }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: on ? "#fff" : "var(--ink-soft)" }}>{label}</span>
               <span style={{ fontFamily: "var(--f-num)", fontSize: 11.5, fontWeight: 600, color: on ? "rgba(255,255,255,0.8)" : "var(--ink-faint)" }}>{n}</span>
             </button>
@@ -147,7 +201,22 @@ function PlantDiary({ go, plant, t = {} }) {
         <DiaryTimeline plant={p} entries={shown} onDiagnose={(p, d) => {
           p.diagnosisPhoto = d && (d.photoData || window.photoFor(d.photo));
           go("doctorChat", p, { observation: d });
-        }} />
+        }} onAddPhoto={openCamera} />
+      </div>
+      </div>
+
+      {/* persistent primary action — stays above the device safe area while the diary scrolls */}
+      <div data-sticky-capture="true" style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 24,
+        padding: "30px 20px max(18px, env(safe-area-inset-bottom))",
+        background: "linear-gradient(180deg, rgba(247,242,232,0), rgba(247,242,232,.9) 32%, rgba(247,242,232,.98) 68%)",
+        pointerEvents: "none" }}>
+        {captureError && <div role="alert" style={{ margin: "0 auto 7px", maxWidth: 300, padding: "6px 10px", borderRadius: 9,
+          background: "rgba(251,246,238,.96)", boxShadow: "var(--sh-1)", textAlign: "center", fontSize: 12, color: "var(--coral)", pointerEvents: "auto" }}>{captureError}</div>}
+        <button onClick={openCamera} disabled={captureBusy} className="btn-green"
+          style={{ width: "100%", height: 56, display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+            fontSize: 16.5, pointerEvents: "auto", opacity: captureBusy ? .72 : 1 }}>
+          <Icon name="camera" size={21} color="#fff" /> {captureBusy ? "正在读取照片…" : "拍照记录今天"}
+        </button>
       </div>
 
       {report && <GrowthReport plant={p} onClose={() => setReport(false)} />}
@@ -156,8 +225,45 @@ function PlantDiary({ go, plant, t = {} }) {
 }
 window.PlantDiary = PlantDiary;
 
+function PlantDeleteConfirm({ plant, onCancel, onDelete }) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+  async function confirm() {
+    if (deleting) return;
+    setDeleting(true);
+    setError("");
+    try { await onDelete(plant); }
+    catch (reason) {
+      setError(reason && reason.message ? reason.message : "没有删除成功，请稍后再试");
+      setDeleting(false);
+    }
+  }
+  return <div role="dialog" aria-modal="true" aria-labelledby="delete-plant-title"
+    style={{ position: "absolute", inset: 0, zIndex: 80, display: "flex", alignItems: "flex-end", justifyContent: "center",
+      padding: "20px 20px max(20px, env(safe-area-inset-bottom))", background: "rgba(28,31,25,.36)", backdropFilter: "blur(5px)" }}>
+    <div style={{ width: "100%", maxWidth: 390, padding: "24px 20px 18px", borderRadius: 24,
+      background: "var(--paper)", boxShadow: "0 20px 55px rgba(28,31,25,.28)", textAlign: "center" }}>
+      <div style={{ width: 58, height: 58, margin: "0 auto 12px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+        background: plant.soft || "var(--green-soft)", border: "1px solid rgba(30,70,50,.12)" }}>
+        <PlantAvatar plant={plant} size={48} />
+      </div>
+      <div id="delete-plant-title" style={{ fontFamily: "var(--f-journal)", fontSize: 21, fontWeight: 650, color: "var(--ink)" }}>要和 {plant.name} 告别吗？</div>
+      <div style={{ margin: "9px auto 0", maxWidth: 290, fontSize: 13.5, lineHeight: 1.65, color: "var(--ink-soft)" }}>
+        删除后，它的照片、日记和问诊记录都会一起移除，且无法恢复。
+      </div>
+      {error && <div role="alert" style={{ marginTop: 10, fontSize: 12.5, color: "var(--coral)" }}>{error}</div>}
+      <button onClick={confirm} disabled={deleting} style={{ width: "100%", height: 48, marginTop: 18, borderRadius: 999,
+        background: "var(--coral)", color: "#fff", fontSize: 15, fontWeight: 650, opacity: deleting ? .68 : 1 }}>
+        {deleting ? "正在删除…" : `确认删除 ${plant.name}`}
+      </button>
+      <button onClick={onCancel} disabled={deleting} style={{ width: "100%", height: 44, marginTop: 4, color: "var(--ink-soft)", fontSize: 14 }}>再留一会儿</button>
+    </div>
+  </div>;
+}
+window.PlantDeleteConfirm = PlantDeleteConfirm;
+
 /* ---------- 第一人称养护自述（性格 + 养护合一，可展开） ---------- */
-function SelfCareGuide({ plant }) {
+function SelfCareGuide({ plant, embedded = false }) {
   const p = plant;
   const [open, setOpen] = useState(false);
   const sc = p.selfCare || {
@@ -169,30 +275,34 @@ function SelfCareGuide({ plant }) {
     ],
   };
   return (
-    <div style={{ padding: "16px 20px 0" }}>
-      <div className="glass-card" style={{ overflow: "hidden" }}>
+    <div style={embedded ? { marginTop: 13, borderTop: "1px solid var(--hairline)" } : { padding: "16px 20px 0" }}>
+      <div className={embedded ? "" : "glass-card"} style={{ overflow: "hidden" }}>
         {/* the plant introduces its own care, first person */}
-        <div style={{ display: "flex", gap: 11, padding: "15px 16px 13px", alignItems: "flex-start" }}>
-          <PlantAvatar plant={p} size={40} />
+        <div style={{ display: "flex", gap: 10, padding: embedded ? "12px 2px 10px" : "15px 16px 13px", alignItems: "flex-start" }}>
+          {!embedded && <PlantAvatar plant={p} size={40} />}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="kicker" style={{ color: p.deep }}>怎么养我 · {p.species}</div>
-            <div className="serif" style={{ fontSize: 15, color: "var(--ink)", marginTop: 5, lineHeight: 1.6 }}>{sc.say}</div>
+            <div className="kicker" style={{ color: "var(--green-deep)", display: "flex", alignItems: "center", gap: 5 }}>
+              <Icon name="leaf" size={13} color="var(--green-deep)" /> 怎么养我
+            </div>
+            <div className="serif" style={{ fontSize: embedded ? 13.5 : 15, color: "var(--ink)", marginTop: 4, lineHeight: 1.55,
+              display: embedded && !open ? "-webkit-box" : "block", WebkitLineClamp: embedded && !open ? 2 : "unset",
+              WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sc.say}</div>
           </div>
         </div>
 
         {/* care tips fully collapsed by default — only revealed on expand */}
         {open && (
           <>
-            <div style={{ height: 1, background: "var(--hairline)", margin: "0 16px" }}></div>
-            <div className="soft-fade" style={{ padding: "13px 16px 4px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ height: 1, background: "var(--hairline)", margin: embedded ? "0 2px" : "0 16px" }}></div>
+            <div className="soft-fade" style={{ padding: embedded ? "12px 2px 3px" : "13px 16px 4px", display: "flex", flexDirection: "column", gap: 12 }}>
               {sc.tips.map((it, i) => (
                 <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: p.soft + "88",
+                  <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: "var(--green-soft)",
                     display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon name={it.icon} size={15} color={p.deep} />
+                    <Icon name={it.icon} size={15} color="var(--green-deep)" />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: p.deep }}>{it.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green-deep)" }}>{it.label}</div>
                     <div className="serif" style={{ fontSize: 13.5, color: "var(--ink-soft)", marginTop: 1, lineHeight: 1.5 }}>{it.text}</div>
                   </div>
                 </div>
@@ -201,13 +311,12 @@ function SelfCareGuide({ plant }) {
           </>
         )}
 
-        <div style={{ height: 1, background: "var(--hairline)", margin: open ? "0 16px" : "0 16px" }}></div>
-        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "11px 16px 13px",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, color: p.deep, fontWeight: 600 }}>
-          <Icon name="leaf" size={15} color={p.deep} />
+        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: embedded ? "8px 2px 12px" : "11px 16px 13px",
+          borderTop: "1px solid var(--hairline)",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, color: "var(--green-deep)", fontWeight: 600 }}>
           {open ? "收起养护指南" : `展开养护指南 · ${sc.tips.length} 条`}
           <span style={{ transform: open ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s", display: "flex" }}>
-            <Icon name="chevR" size={15} color={p.deep} />
+            <Icon name="chevR" size={15} color="var(--green-deep)" />
           </span>
         </button>
       </div>

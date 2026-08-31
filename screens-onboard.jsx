@@ -48,7 +48,9 @@ function Onboard({ onComplete, onSkip, startAtSpecies = false }) {
     setSaving(true);
     setSaveError("");
     try {
-      await onComplete(buildPlant(opener), photoOverride || firstPhoto);
+      const candidate = typeof photoOverride === "string" ? photoOverride : firstPhoto;
+      const validPhoto = /^data:image\/(?:jpeg|png|webp|heic|heif);base64,/i.test(candidate) ? candidate : "";
+      await onComplete(buildPlant(opener), validPhoto);
     } catch (error) {
       setSaveError(error && error.message ? error.message : "这篇日记暂时没有写进去，请再试一次");
       setSaving(false);
@@ -84,31 +86,60 @@ window.Onboard = Onboard;
 function ObWelcome({ sp, onNext, onSkip }) {
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", padding: "0 36px", textAlign: "center" }}>
-      {/* empty pot illustration */}
-      <div style={{ position: "relative", marginBottom: 30 }}>
-        <div style={{ width: 150, height: 150, borderRadius: "50%", border: "1.5px dashed var(--hairline)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 18 }}>
-          <svg width="64" height="50" viewBox="0 0 64 50">
-            <path d="M14 6h36l-5 38H19z" fill="none" stroke="var(--ink-faint)" strokeWidth="1.6" strokeLinejoin="round" strokeDasharray="3 4"/>
-            <path d="M10 4h44" stroke="var(--ink-faint)" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="3 4"/>
-            <path d="M32 32v-8" stroke="var(--green)" strokeWidth="1.6" strokeLinecap="round"/>
-            <path d="M32 27c-3-1-5 0-6 2 2 1 5 1 6-2Z" fill="var(--green-soft)" stroke="var(--green)" strokeWidth="1.2"/>
-          </svg>
+      alignItems: "center", padding: "max(76px, calc(env(safe-area-inset-top) + 42px)) 24px 30px", textAlign: "center",
+      background: "radial-gradient(circle at 18% 12%, rgba(255,255,255,.68), transparent 28%), radial-gradient(circle at 86% 78%, rgba(189,204,164,.18), transparent 31%)" }}>
+      <div aria-hidden="true" style={{ position: "absolute", inset: "9% 7% 12%", pointerEvents: "none", opacity: .34,
+        backgroundImage: "linear-gradient(rgba(87,107,76,.08) 1px, transparent 1px)", backgroundSize: "100% 29px",
+        maskImage: "linear-gradient(transparent, #000 18%, #000 76%, transparent)", WebkitMaskImage: "linear-gradient(transparent, #000 18%, #000 76%, transparent)" }} />
+
+      {/* a quiet first page from a botanical field notebook */}
+      <div style={{ width: "100%", maxWidth: 310, position: "relative", padding: "22px 23px 25px", boxSizing: "border-box",
+        background: "rgba(255,253,247,.82)", border: "1px solid rgba(112,104,84,.15)", borderRadius: "4px 18px 6px 5px",
+        boxShadow: "0 18px 44px rgba(73,66,48,.12), 0 2px 0 rgba(255,255,255,.72) inset", transform: "rotate(-1deg)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--ink-faint)",
+          fontSize: 10.5, letterSpacing: ".16em" }}>
+          <span>PLANT NOTES</span><span style={{ fontFamily: "var(--f-num)", letterSpacing: ".08em" }}>NO. 001</span>
         </div>
-        <div style={{ position: "absolute", top: -6, right: -10, fontFamily: "var(--f-script)", fontSize: 20, color: "var(--ink-faint)",
-          transform: "rotate(8deg)" }}>空空的…</div>
+        <div style={{ height: 1, marginTop: 11, background: "linear-gradient(90deg, var(--green-deep), rgba(30,70,50,.08))" }} />
+
+        <div style={{ height: 156, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="116" height="126" viewBox="0 0 116 126" fill="none">
+            <ellipse cx="58" cy="108" rx="35" ry="6" fill="rgba(41,65,48,.09)" />
+            <path d="M36 67h44l-5.5 39h-33L36 67Z" fill="#DDBE89" fillOpacity=".42" stroke="#756B56" strokeWidth="1.3" />
+            <path d="M31 66.5h54" stroke="#756B56" strokeWidth="2" strokeLinecap="round" />
+            <path d="M58 67V37" stroke="#285A45" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M58 49c-13-1-21-8-23-20 13-1 22 6 23 20Z" fill="#B8CBA5" stroke="#285A45" strokeWidth="1.4" />
+            <path d="M58 40c8-12 17-15 27-10-3 12-12 18-27 18" fill="#D8E2C8" stroke="#285A45" strokeWidth="1.4" />
+            <path d="M58 34c-2-10 1-18 9-24 7 9 5 18-9 29" fill="#89A471" stroke="#285A45" strokeWidth="1.4" />
+            <path d="M58 57c10-5 19-4 27 3-7 9-17 10-27 4" fill="#A8BC91" stroke="#285A45" strokeWidth="1.4" />
+          </svg>
+          <svg width="76" height="108" viewBox="0 0 76 108" style={{ position: "absolute", right: -13, top: 16, opacity: .28, transform: "rotate(13deg)" }}>
+            <path d="M36 103C31 75 35 42 55 6" fill="none" stroke="#446348" strokeWidth="1.2" />
+            {[18,34,51,68].map((y, index) => <g key={y}>
+              <ellipse cx={index % 2 ? 48 : 27} cy={y} rx="13" ry="5.5" fill="#80966C" transform={`rotate(${index % 2 ? -35 : 34} ${index % 2 ? 48 : 27} ${y})`} />
+            </g>)}
+          </svg>
+          <span style={{ position: "absolute", left: 2, bottom: 14, fontFamily: "var(--f-script)", fontSize: 17,
+            color: "var(--green-deep)", transform: "rotate(-7deg)" }}>等待相遇</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--ink-faint)", fontSize: 10.5 }}>
+          <span>DATE</span><span style={{ flex: 1, borderBottom: "1px solid rgba(112,104,84,.26)" }} />
+          <span>NAME</span><span style={{ width: 48, borderBottom: "1px solid rgba(112,104,84,.26)" }} />
+        </div>
       </div>
 
-      <div style={{ fontFamily: "var(--f-script)", fontSize: 19, color: "var(--ink-faint)" }}>你的花花日记本</div>
-      <div style={{ fontFamily: "var(--f-journal)", fontSize: 27, fontWeight: 600, color: "var(--ink)", marginTop: 6, lineHeight: 1.4 }}>
-        还空着一页，<br />等一盆花住进来
+      <div style={{ marginTop: 28, fontFamily: "var(--f-script)", fontSize: 17, color: "var(--green-deep)", letterSpacing: ".08em" }}>你的花花日记本</div>
+      <div style={{ fontFamily: "var(--f-journal)", fontSize: 27, fontWeight: 600, color: "var(--ink)", marginTop: 6, lineHeight: 1.35 }}>
+        第一篇，留给新来的它
       </div>
-      <button onClick={onNext} className="btn-green" style={{ marginTop: 36, width: "100%", maxWidth: 300, height: 56,
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 17 }}>
+      <div className="serif" style={{ maxWidth: 270, marginTop: 9, fontSize: 13, lineHeight: 1.65, color: "var(--ink-soft)" }}>
+        从一张照片开始，慢慢记下<br />它发芽、舒展和长大的日子。
+      </div>
+      <button onClick={onNext} className="btn-green" style={{ marginTop: 25, width: "100%", maxWidth: 286, height: 52,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 9, fontSize: 16.5 }}>
         <Icon name="leaf" size={22} color="#fff" /> 添加第一盆植物
       </button>
-      <button onClick={onSkip} style={{ marginTop: 16, fontSize: 14, color: "var(--ink-faint)" }}>先随便逛逛</button>
+      <button onClick={onSkip} style={{ marginTop: 13, padding: "8px 14px", fontSize: 13, color: "var(--ink-faint)" }}>先随便逛逛</button>
     </div>
   );
 }
@@ -203,14 +234,18 @@ function ObName({ sp, name, setName, traits, toggleTrait, onBack, onNext }) {
           {sp.traits.map(t => {
             const on = traits.includes(t);
             return (
-              <button key={t} onClick={() => toggleTrait(t)} className="badge"
+              <button key={t} onClick={() => toggleTrait(t)} className="badge" aria-pressed={on}
                 style={{ minWidth: 0, height: 42, fontSize: 13.5, padding: "0 8px",
                   background: on ? "var(--green-grad)" : "rgba(58,53,46,0.05)",
                   color: on ? "#fff" : "var(--ink-faint)", border: on ? "none" : "1px dashed var(--hairline)",
                   boxShadow: on ? "0 5px 12px rgba(30,70,50,.18)" : "none",
-                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                <span aria-hidden="true" style={{ width: 13, height: 13, display: "inline-flex", flexShrink: 0,
-                  opacity: on ? 1 : 0 }}><Icon name="check" size={13} color="#fff" /></span>{t}
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <span aria-hidden="true" style={{ width: 15, height: 15, borderRadius: "50%", display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  border: on ? "none" : "1.6px solid rgba(30,70,50,.42)",
+                  background: "transparent" }}>
+                  {on && <Icon name="check" size={14} color="#fff" stroke={3} />}
+                </span>{t}
               </button>
             );
           })}
@@ -412,7 +447,7 @@ function ObReveal({ sp, name, opener, firstPhoto, onPhoto, onDone, saving, saveE
         style={{ marginTop: 14, width: "100%", maxWidth: 300, height: 52, fontSize: 16 }}>
         重新分析
       </button>}
-      {!firstPhoto && <button onClick={onDone} disabled={saving}
+      {!firstPhoto && <button onClick={() => onDone("")} disabled={saving}
         style={{ marginTop: 16, color: "var(--ink-soft)", fontFamily: "var(--f-journal)", fontSize: 14, padding: "8px 18px" }}>
         {saving ? "正在进入……" : "暂时跳过"}
       </button>}

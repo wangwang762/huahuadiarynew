@@ -74,6 +74,7 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
   const docAv = <DoctorAvatar size={36} />;
   const avatar = accentDoctor ? docAv : (avatarProp || <CactusAvatar size={36} />);
   const bb = { bg: bubbleBg, border: bubbleBorder };
+  const renderReply = content => accentDoctor ? <DoctorReply content={content} /> : content;
 
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
@@ -101,9 +102,11 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
       {/* messages */}
       <div ref={scrollRef} className="noscroll" style={{ flex: 1, overflowY: "auto", padding: "12px 16px 8px" }}>
         {/* opener */}
-        <Bubble from="them" avatar={avatar} bb={bb}>{opener}</Bubble>
+        <Bubble from="them" avatar={avatar} bb={bb}>{renderReply(opener)}</Bubble>
         {convo.map((m, i) => (
-          <Bubble key={i} from={m.role === "user" ? "me" : "them"} avatar={avatar} bb={bb}>{m.content}</Bubble>
+          <Bubble key={i} from={m.role === "user" ? "me" : "them"} avatar={avatar} bb={bb}>
+            {m.role === "assistant" ? renderReply(m.content) : m.content}
+          </Bubble>
         ))}
         {typing && <Typing avatar={avatar} />}
         {serviceError && <div role="alert" style={{ margin: "6px 0 12px 45px", padding: "10px 12px",
@@ -124,14 +127,18 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         </div>
       )}
 
-      {/* compact consult action — anchored to the composer instead of interrupting the conversation */}
-      {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && !finished && (
-        <div style={{ display: "flex", justifyContent: "center", margin: "0 0 -7px", position: "relative", zIndex: 12 }}>
+      {/* composer: secondary finish action and message field share one stable bottom surface */}
+      {!finished && <div className="chat-input-bar" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "9px 16px 0",
+        background: "var(--glass-strong)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+        borderTop: "1px solid var(--hairline)" }}>
+      {accentDoctor && onFinishDx && convo.some(m => m.role === "assistant") && !typing && (
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
           <button onClick={finishConsult} disabled={finishing}
             aria-busy={finishing ? "true" : "false"}
-            style={{ height: 34, padding: "0 15px", fontSize: 12.5, color: "var(--green-deep)", fontWeight: 650,
-              background: "rgba(237,244,229,.96)", border: "1.5px solid var(--green)", borderRadius: "var(--r-pill)",
-              boxShadow: "0 5px 14px rgba(30,70,50,.12)", display: "inline-flex", alignItems: "center", gap: 6,
+            style={{ minHeight: 38, padding: "0 15px", fontSize: 13.5, color: "var(--green-deep)", fontWeight: 650,
+              background: "rgba(255,255,255,.82)", border: "1px solid rgba(30,70,50,.3)", borderRadius: "var(--r-pill)",
+              boxShadow: "0 3px 9px rgba(30,70,50,.07)",
+              display: "inline-flex", alignItems: "center", gap: 6,
               fontFamily: "var(--f-journal)", opacity: finishing ? .78 : 1 }}>
             {finishing ? <span aria-hidden="true" style={{ display: "inline-flex", gap: 3 }}>
               {[0,1,2].map(i => <i key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--green-deep)",
@@ -142,23 +149,48 @@ function ChatBase({ go, title, subtitle, headerAvatar, systemPrompt, opener,
         </div>
       )}
 
-      {/* input — hidden once consult is wrapped up */}
-      {!finished && (
-      <div className="chat-input-bar" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 0",
-        background: "var(--glass-strong)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-        borderTop: "1px solid var(--hairline)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <input value={draft} onChange={e => setDraft(e.target.value)} disabled={finishing}
           onKeyDown={e => { if (e.key === "Enter") send(); }}
           placeholder={placeholder || (accentDoctor ? "继续追问花大夫…" : "说点什么…")}
           style={{ flex: 1, height: 46, borderRadius: "var(--r-pill)", border: "1px solid var(--hairline)",
-            background: "#fff", padding: "0 18px", fontSize: 15, color: "var(--ink)", outline: "none" }} />
+            background: "#fff", padding: "0 18px", fontSize: 16, color: "var(--ink)", outline: "none" }} />
         <button onClick={() => send()} disabled={finishing} className="btn-green"
           style={{ width: 46, height: 46, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
             background: sendGrad || "var(--green-grad)" }}>
           <Icon name="send" size={20} color="#fff" />
         </button>
       </div>
-      )}
+      </div>}
+    </div>
+  );
+}
+
+function DoctorReply({ content }) {
+  const clean = String(content || "")
+    .replace(/\*\*/g, "")
+    .replace(/^#{1,4}\s*/gm, "")
+    .trim();
+  const blocks = clean.split(/\n\s*\n+/).map(part => part.trim()).filter(Boolean);
+  const headingPattern = /^(初步判断|初步分诊|我的判断|当前判断|现在怎么做|处理建议|建议|下一步|最关键问题|需要确认|请确认|提醒|风险提醒)[：:]\s*/;
+  return (
+    <div style={{ display: "grid", gap: 10, whiteSpace: "normal" }}>
+      {blocks.map((block, index) => {
+        const match = block.match(headingPattern);
+        const rawTitle = match && match[1];
+        const title = /问题|确认/.test(rawTitle || "") ? "需要你确认"
+          : /提醒|风险/.test(rawTitle || "") ? "留意"
+          : /建议|怎么做|下一步/.test(rawTitle || "") ? "现在怎么做"
+          : rawTitle ? "初步判断" : "";
+        const body = (match ? block.slice(match[0].length) : block)
+          .replace(/^[✅⚠️💡🔎]\s*/u, "")
+          .replace(/^[-•]\s*/gm, "");
+        return <section key={index} style={index ? { paddingTop: 9, borderTop: "1px solid rgba(30,70,50,.12)" } : null}>
+          {title && <div style={{ marginBottom: 4, fontFamily: "var(--f-ui)", fontSize: 11.5, fontWeight: 750,
+            letterSpacing: ".04em", color: "var(--green-deep)" }}>{title}</div>}
+          <div style={{ fontSize: 15, lineHeight: 1.65, color: "var(--ink)" }}>{body}</div>
+        </section>;
+      })}
     </div>
   );
 }
@@ -239,7 +271,25 @@ function DoctorChat({ go, plant, observation, onSaveEntry, onUpdateEntry }) {
   );
   const diagnosisImage = p.diagnosisPhoto || "";
   async function finishDx(conclusion, messages) {
-    const summary = await window.HHDoctor.summarize({ plant: p, image: diagnosisImage, messages });
+    let summary;
+    try {
+      summary = await window.HHDoctor.summarize({ plant: p, image: diagnosisImage, messages });
+    } catch (_) {
+      const readableConclusion = String(conclusion || "本次问诊内容已保存，病因仍需复核")
+        .replace(/\*\*|#{1,4}\s*/g, "")
+        .replace(/\s+/g, " ")
+        .slice(0, 160);
+      summary = {
+        symptom: "用户已完成一次花大夫问诊",
+        conclusion: readableConclusion,
+        plan: "保留本次照片和问诊内容，继续观察；如症状加重，请重新拍照复诊。",
+        points: ["继续观察", "症状加重时复诊"],
+        followupDays: 3,
+        urgency: "recheck",
+        confidence: 0,
+        fallback: true,
+      };
+    }
     if (p.isNew) { go("archiveNew", p, { dx: summary }); return null; }
     if (observation && onUpdateEntry) {
       await onUpdateEntry(p, {
@@ -267,6 +317,8 @@ function DoctorChat({ go, plant, observation, onSaveEntry, onUpdateEntry }) {
         confidence: summary.confidence,
         voice: p.voice,
         photo: p.photoId,
+        photoData: diagnosisImage,
+        photos: diagnosisImage ? [diagnosisImage] : [],
       });
       await onSaveEntry(p, entry);
     }

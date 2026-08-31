@@ -65,6 +65,15 @@
     return clone(safeGarden);
   }
 
+  function guestGardenSnapshot() {
+    return readGuestGarden({ id: "guest-local", guest: true });
+  }
+
+  function importId(prefix, ownerId, sourceId, index = 0) {
+    const safe = value => String(value || "item").replace(/[^a-zA-Z0-9_-]/g, "-").slice(-48);
+    return `${prefix}-${safe(ownerId)}-${safe(sourceId)}${index ? `-${index}` : ""}`;
+  }
+
   function rowsFrom(result) {
     if (result && result.error) throw result.error;
     const data = result && result.data !== undefined ? result.data : result;
@@ -158,6 +167,41 @@
     }
   }
 
+  async function migrateGuestGarden(account) {
+    const guestGarden = guestGardenSnapshot();
+    const guestPlants = guestGarden.plants || [];
+    const cloudGarden = await bootstrap(account);
+    if (!guestPlants.length || window.HHCloud.demo) {
+      return { ...cloudGarden, migratedCount: 0 };
+    }
+
+    const importedSources = new Set((cloudGarden.plants || []).map(plant => plant.guestSourceId).filter(Boolean));
+    let migratedCount = 0;
+    for (let plantIndex = 0; plantIndex < guestPlants.length; plantIndex += 1) {
+      const guestPlant = guestPlants[plantIndex];
+      if (importedSources.has(guestPlant.id)) continue;
+      const plantId = importId("guest-plant", account.id, guestPlant.id, plantIndex);
+      const diary = (guestPlant.diary || []).map((entry, entryIndex) => ({
+        ...clone(entry),
+        id: importId("guest-entry", account.id, entry.id || `${guestPlant.id}-${entryIndex}`, entryIndex),
+        guestSourceId: entry.id || `${guestPlant.id}-${entryIndex}`,
+      }));
+      await createPlantWithFirstEntry({
+        ...clone(guestPlant),
+        id: plantId,
+        guestSourceId: guestPlant.id,
+        diary,
+      });
+      importedSources.add(guestPlant.id);
+      migratedCount += 1;
+    }
+
+    // 云端全部写入成功后再清空游客副本；中途失败时仍可安全重试。
+    writeGuestGarden(emptyGuestGarden({ id: "guest-local", guest: true }));
+    const mergedGarden = await bootstrap(account);
+    return { ...mergedGarden, migratedCount };
+  }
+
   async function setOnboarded(account) {
     activeAccount = account || activeAccount;
     if (isGuestAccount()) {
@@ -242,6 +286,23 @@
     return clone(plant);
   }
 
+  async function deletePlant(plantId) {
+    if (isGuestAccount()) {
+      const garden = readGuestGarden();
+      const existingIndex = garden.plants.findIndex(item => item.id === plantId);
+      if (existingIndex < 0) throw new Error("没有找到这盆花");
+      garden.plants.splice(existingIndex, 1);
+      writeGuestGarden(garden);
+      return true;
+    }
+    if (window.HHCloud.demo) return true;
+    const uid = currentOwnerId();
+    const { db } = window.HHCloud.get();
+    throwWriteError(await db.from(TABLES.diaryEntries).delete().eq("plant_id", plantId).eq("owner_id", uid));
+    throwWriteError(await db.from(TABLES.plants).delete().eq("id", plantId).eq("owner_id", uid));
+    return true;
+  }
+
   async function addDiaryEntry(plantId, entry) {
     if (isGuestAccount()) {
       const garden = readGuestGarden();
@@ -294,9 +355,12 @@
     TABLES,
     GUEST_STORAGE_KEY,
     bootstrap,
+    guestGardenSnapshot,
+    migrateGuestGarden,
     setOnboarded,
     createPlantWithFirstEntry,
     updatePlant,
+    deletePlant,
     addDiaryEntry,
     updateDiaryEntry,
   };

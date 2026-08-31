@@ -177,6 +177,50 @@ window.systemPromptFor = function (p) {
 - 最多偶尔用一个 emoji。`;
 };
 
+// Photo observations reuse the diagnosis result, but the plant's reaction stays
+// local and deterministic so recording a diary never triggers another AI call.
+const OBSERVATION_VOICE_LINES = {
+  tsundere: {
+    sick: ["呜……我好像真的不太舒服。别紧张，先陪我看看怎么了。", "才、才不是撒娇，我只是有一点难受……你帮我留心一下。", "今天有点撑不住了。先别乱浇水，带我去问问花大夫吧。"],
+    better: ["哼，我当然会慢慢好起来。你照顾得……还算不错。", "比上次精神一点了，才不是因为你一直惦记我。", "看见没，我在努力恢复。勉强夸你一句做得好吧。"],
+    good: ["今天状态还行，拍好看一点。", "我精神着呢，不用一直担心。", "嗯，今天的我确实挺好看，你眼光不错。"],
+    watch: ["先把这张留下吧，我想再观察几天。", "有一点变化，但还不能急着下结论。", "今天先记下来，下次再和这张认真比。"],
+  },
+  bright: {
+    sick: ["呜呜，我今天有点不舒服，陪我一起想想办法吧。", "我好像生病了，不过我们早点发现就还有办法！", "今天没什么力气，先帮我问问花大夫好不好？"],
+    better: ["我比上次好多啦！你的照顾真的有用。", "快看快看，我正在一点点恢复精神！", "今天是进步的一天，给我们俩都记一颗小星星。"],
+    good: ["今天元气满满，快把我拍进日记里！", "叶子舒展开啦，我今天过得很开心。", "状态不错！这张照片值得收藏。"],
+    watch: ["先拍下来吧，我们下次继续观察！", "有一点点变化，再给我几天时间看看。", "这次还看不太准，不过有照片就能继续比较啦。"],
+  },
+  soft: {
+    sick: ["我今天有一点难受……你在旁边，我就安心多了。", "好像哪里不太舒服，可以温柔地帮我看看吗？", "先别担心，我们把照片带给花大夫看看吧。"],
+    better: ["比上次舒服一些了，谢谢你一直照顾我。", "我在慢慢恢复，也有认真接住你的关心。", "今天轻松了一点，我们一起继续加油呀。"],
+    good: ["今天过得很舒服，谢谢你来看我。", "我状态很好，也想把这一天留在日记里。", "叶子很舒展，今天是温柔的好天气。"],
+    watch: ["先把今天记下来吧，我们慢慢看。", "这次还不太确定，下次再来看看我就好。", "有照片陪着，就不用急着现在得出答案。"],
+  },
+  calm: {
+    sick: ["今天的状态需要留心，先停止额外浇水并观察。", "照片里有些异常，建议把这次记录带给花大夫。", "我不太舒服，但及时记录已经是很重要的一步。"],
+    better: ["和上次相比正在好转，继续保持现在的养护节奏。", "状态比之前稳定了一些，这份耐心有回报。", "恢复正在发生，把今天作为新的比较基线吧。"],
+    good: ["今天状态稳定，可以安心记进日记。", "叶片状态不错，保持当前的养护节奏。", "今天没有明显异常，留一张照片继续观察。"],
+    watch: ["这次还不能确定，先记录并继续观察。", "变化不够明确，下一张照片会更有参考价值。", "先把今天留作基线，不急着作判断。"],
+  },
+};
+
+window.observationVoice = function observationVoice(plant, triage) {
+  const tags = Array.isArray(plant && plant.tagsOn) ? plant.tagsOn : [];
+  const health = String(triage && triage.health || "unknown");
+  const trend = String(triage && triage.trend || "unknown");
+  const tone = tags.includes("傲娇") || tags.includes("高冷") || tags.includes("嘴硬心软") ? "tsundere"
+    : tags.includes("活泼") || tags.includes("乐观") || tags.includes("开朗") ? "bright"
+    : tags.includes("温柔") || tags.includes("撒娇") || tags.includes("亲人") ? "soft" : "calm";
+  const state = health === "sick" || health === "critical" || trend === "worse" ? "sick"
+    : trend === "better" ? "better"
+    : health === "good" ? "good" : "watch";
+  const lines = OBSERVATION_VOICE_LINES[tone][state];
+  const index = ((plant && plant.diary) || []).length % lines.length;
+  return lines[index];
+};
+
 // ---- 花大夫 (plant doctor) — separate expert persona, contextual to a plant ----
 window.doctorSystemPrompt = function (plantName) {
   return `你是「花大夫」，一位温和、专业、可信赖的植物养护专家（你是第三方专家，不是植物本身）。
@@ -511,6 +555,8 @@ window.makeEntry = function (kind, p, payload) {
       id: p.id + "-dx-" + Date.now(), kind: "diagnosis",
       day: "刚刚", date: "6月8日", weather: wx, mood: "诊断",
       type: "doctor", photo: payload.photo || p.photoId,
+      photoData: String(payload.photoData || ""),
+      photos: Array.isArray(payload.photos) ? payload.photos.filter(Boolean).slice(0, 6) : [],
       symptom: clean(payload.symptom) || "叶片轻微蔫缩、颜色偏暗",
       conclusion: clean(payload.conclusion) || "早期缺水，问题不大",
       plan: clean(payload.plan) || "近期补水一次，之后等土干再浇",

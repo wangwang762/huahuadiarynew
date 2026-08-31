@@ -31,7 +31,8 @@ global.fetch = async (url, options) => {
           content: wantsTriage
             ? JSON.stringify({
                 health: "watch",
-                observations: ["叶尖焦黄"],
+                current_observations: ["图1叶尖轻微焦黄"],
+                previous_observations: ["图2叶尖焦黄范围较小"],
                 likely_cause: "盆土偏湿",
                 trend: "worse",
                 trend_summary: "叶尖焦黄范围比上次扩大",
@@ -61,7 +62,7 @@ global.fetch = async (url, options) => {
   };
 };
 
-const { handler } = require("../aliyun-functions/flower-doctor/index.js");
+const { handler, _test } = require("../aliyun-functions/flower-doctor/index.js");
 
 function event(method, payload, origin = "https://huahua.example") {
   return Buffer.from(JSON.stringify({
@@ -77,6 +78,12 @@ function event(method, payload, origin = "https://huahua.example") {
   assert.equal(preflight.statusCode, 204);
   assert.equal(preflight.headers["Access-Control-Allow-Origin"], "https://huahua.example");
   assert.equal(calls.length, 0);
+
+  const productionPreflight = await handler(event("OPTIONS", null,
+    "https://huahuadiary-d4gajnlumc8432f6c-1322727508.tcloudbaseapp.com"));
+  assert.equal(productionPreflight.statusCode, 204);
+  assert.equal(productionPreflight.headers["Access-Control-Allow-Origin"],
+    "https://huahuadiary-d4gajnlumc8432f6c-1322727508.tcloudbaseapp.com");
 
   const chatResponse = await handler(event("POST", {
     action: "chat",
@@ -132,9 +139,18 @@ function event(method, payload, origin = "https://huahua.example") {
     "data:image/jpeg;base64,CURRENT==",
     "data:image/jpeg;base64,PREVIOUS==",
   ]);
+  const triagePromptText = triageModelBody.messages.flatMap(message =>
+    Array.isArray(message.content) ? message.content : []
+  ).filter(part => part && part.type === "text").map(part => part.text).join("\n");
+  assert.match(triagePromptText, /health只根据图1/);
+  assert.match(triagePromptText, /不得把图2.*写入图1/);
+  assert.match(triagePromptText, /图1健康而图2异常/);
+  assert.match(triagePromptText, /【图1：本次照片】/);
+  assert.match(triagePromptText, /【图2：上一次照片】/);
   assert.equal(triageBody.triage.health, "watch");
   assert.equal(triageBody.triage.route, "soft_hint");
-  assert.deepEqual(triageBody.triage.observations, ["叶尖焦黄"]);
+  assert.deepEqual(triageBody.triage.observations, ["图1叶尖轻微焦黄"]);
+  assert.deepEqual(triageBody.triage.previousObservations, ["图2叶尖焦黄范围较小"]);
   assert.equal(triageBody.triage.trend, "worse");
   assert.equal(triageBody.triage.trendSummary, "叶尖焦黄范围比上次扩大");
   assert.equal(triageBody.triage.confidence, 0.84);
@@ -156,6 +172,15 @@ function event(method, payload, origin = "https://huahua.example") {
   const rejected = await handler(event("POST", { action: "unknown" }));
   assert.equal(rejected.statusCode, 400);
   assert.equal(JSON.parse(rejected.body).ok, false);
+
+  const configuredOrigins = process.env.ALLOWED_ORIGINS;
+  delete process.env.ALLOWED_ORIGINS;
+  assert.equal(
+    _test.allowedOrigins().includes("https://huahuadiary-d4gajnlumc8432f6c-1322727508.tcloudbaseapp.com"),
+    true,
+    "the deployed CloudBase app must be allowed by the default CORS policy",
+  );
+  process.env.ALLOWED_ORIGINS = configuredOrigins;
 
   global.fetch = originalFetch;
   console.log("FLOWER_DOCTOR_ALIYUN_OK");

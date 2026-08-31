@@ -42,7 +42,7 @@ function TitleMark({ style }) {
   );
 }
 
-function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWeather }) {
+function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWeather, onAccount }) {
   const preset = WX[weather] || WX["小雨"];
   const wx = liveWeather && liveWeather.live ? liveWeather : preset;
   const shownWeather = liveWeather && liveWeather.live ? liveWeather.weather : weather;
@@ -81,15 +81,21 @@ function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWe
       {/* content */}
       <div style={{ position: "relative", zIndex: 2, padding: "54px 22px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button onClick={onRefreshWeather} title="点击更新定位和天气" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <button onClick={onRefreshWeather} title="点击更新定位和天气" style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
             <Icon name="pin" size={15} color={wx.tint} />
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{liveWeather && liveWeather.city || "上海"}</span>
+            <span aria-hidden="true" style={{ width: 1, height: 12, margin: "0 2px", background: "rgba(58,53,46,.16)" }} />
+            <Icon name={wx.icon} size={15} color={wx.tint} />
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{shownWeather}</span>
+            <span style={{ fontFamily: "var(--f-num)", fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)" }}>
+              {typeof wx.temp === "number" ? `${wx.temp}°` : wx.temp}
+            </span>
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
-            <Icon name={wx.icon} size={17} color={wx.tint} />
-            <span style={{ fontWeight: 600 }}>{shownWeather}</span>
-            <span style={{ fontFamily: "var(--f-num)", fontWeight: 600 }}>{typeof wx.temp === "number" ? `${wx.temp}°` : wx.temp}</span>
-          </div>
+          <button onClick={onAccount} aria-label="账号管理" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--green-deep)",
+            background: "rgba(251,248,239,.68)", border: "1px solid rgba(30,70,50,.14)", boxShadow: "0 3px 10px rgba(50,43,31,.09)" }}>
+            <Icon name="user" size={18} color="var(--green-deep)" />
+          </button>
         </div>
 
         {/* immersive weather mood line */}
@@ -109,7 +115,7 @@ function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWe
   );
 }
 
-function DiaryHome({ go, t = {} }) {
+function DiaryHome({ go, t = {}, onAccount }) {
   const plants = window.PLANTS;
   const [filter, setFilter] = useState("all"); // all | care
   const careList = plants.filter(p => p.statusTone === "warn");
@@ -130,9 +136,10 @@ function DiaryHome({ go, t = {} }) {
   }
 
   return (
-    <div className="noscroll" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 110 }}>
+    <div className="noscroll scroll-with-nav" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 110 }}>
       {/* ---- immersive weather masthead ---- */}
-      <WeatherHeader weather={weather} titleStyle={titleStyle} flourish={flourish} liveWeather={liveWeather} onRefreshWeather={refreshWeather} />
+      <WeatherHeader weather={weather} titleStyle={titleStyle} flourish={flourish} liveWeather={liveWeather}
+        onRefreshWeather={refreshWeather} onAccount={onAccount} />
 
       {/* ---- filter pills ---- */}
       <div style={{ display: "flex", gap: 9, padding: "16px 22px 0" }}>
@@ -160,7 +167,7 @@ function DiaryHome({ go, t = {} }) {
           <DiaryCover key={p.id} p={p} onOpen={() => go("plantDiary", p)} />
         ))}
         {/* adopt new — same height as cards */}
-        <button onClick={() => go("onboard")} style={{ display: "block", width: "100%", height: "100%", padding: 0 }}>
+        <button onClick={() => go("onboard", null, { startAtSpecies: true })} style={{ display: "block", width: "100%", height: "100%", padding: 0 }}>
           <div style={{ height: "100%", minHeight: 248, borderRadius: "var(--r-xl)", border: "1.5px dashed var(--hairline)",
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
             color: "var(--ink-faint)", background: "rgba(255,255,255,0.25)" }}>
@@ -186,14 +193,17 @@ function DiaryCover({ p, onOpen }) {
     : [(latest && (latest.voice || latest.conclusion || latest.plan)) || "刚记下了一笔。"];
   const warn = p.statusTone === "warn";
   return (
-    <button onClick={onOpen} style={{ display: "block", width: "100%", height: "100%", textAlign: "left", padding: 0 }}>
+    <button onClick={onOpen} onContextMenu={event => event.preventDefault()} aria-label={`打开${p.name}的日记`}
+      style={{ display: "block", width: "100%", height: "100%", textAlign: "left", padding: 0, touchAction: "pan-y",
+        userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
       <div className="glass-card" style={{ height: "100%", minHeight: 248, padding: 10, display: "flex", flexDirection: "column" }}>
         {/* photo */}
         <div style={{ position: "relative", marginBottom: 10 }}>
           <div style={{ borderRadius: 8, overflow: "hidden", background: `linear-gradient(180deg, #FBF7EF 0%, ${p.soft}66 78%, ${p.soft}aa 100%)`,
             display: "flex", alignItems: "flex-end", justifyContent: "center", position: "relative", height: 108 }}>
-            <image-slot id={p.photoId} shape="rounded" radius="3" transparent-frame="" src={window.cutFor ? window.cutFor(p.photoId) : window.photoFor(p.photoId)}
-              fit="contain" position="50% 100%"
+            <image-slot id={p.photoId} shape="rounded" radius="3" transparent-frame={p.avatarData ? undefined : ""}
+              src={p.avatarData || (window.cutFor ? window.cutFor(p.photoId) : window.photoFor(p.photoId))}
+              fit={p.avatarData ? "cover" : "contain"} position={p.avatarData ? "50% 50%" : "50% 100%"}
               style={{ width: "100%", height: "104px", display: "block", position: "relative",
                 top: window.coverOffsetY ? window.coverOffsetY(p.photoId) : 0,
                 transform: `scale(${window.coverScale ? window.coverScale(p.photoId) : 1})`, transformOrigin: "bottom center" }}

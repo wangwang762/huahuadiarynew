@@ -29,8 +29,16 @@ if (chat.includes("这次约 60ml")) throw new Error("doctor still contains a fa
 for (const marker of ["window.HHDoctor.reply", "window.HHDoctor.summarize", "summary.symptom", "summary.conclusion"]) {
   if (!chat.includes(marker)) throw new Error(`missing real doctor flow marker: ${marker}`);
 }
-for (const marker of ["observation", "onUpdateEntry", 'doctorStatus: "completed"', "diagnosis: {"]) {
+for (const marker of ["observation", "onUpdateEntry", 'doctorStatus: "completed"', "diagnosis: {", "photoData: diagnosisImage", "photos: diagnosisImage ? [diagnosisImage] : []"]) {
   if (!chat.includes(marker)) throw new Error(`missing source-observation diagnosis marker: ${marker}`);
+}
+for (const marker of ["function DiaryPhotos", "diaryPhotoSources", 'aria-label="上一张"', 'aria-label="下一张"', 'role="dialog"']) {
+  if (!diary.includes(marker)) throw new Error(`missing diagnosis photo gallery marker: ${marker}`);
+}
+
+const doctorScreen = fs.readFileSync("screens-doctor.jsx", "utf8");
+if (!doctorScreen.includes('entry.doctorStatus === "completed" && entry.diagnosis') || !doctorScreen.includes("entry.diagnosis || entry")) {
+  throw new Error("completed observation diagnoses are missing from the clinic case wall");
 }
 for (const marker of ["observation={top.observation}", "onUpdateEntry={updateEntry}"]) {
   if (!app.includes(marker)) throw new Error(`missing doctor route handoff marker: ${marker}`);

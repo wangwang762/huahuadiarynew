@@ -6,5 +6,12 @@
     "build": "node scripts/build-cloudbase.mjs",
     "postinstall": "npm run build",
     "test": "for test_file in tests/*.test.js; do node \"$test_file\" || exit 1; done"
+  },
+  "devDependencies": {
+    "@cloudbase/cli": "^3.8.1",
+    "esbuild": "^0.28.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.35.4"
   }
 }

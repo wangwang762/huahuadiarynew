@@ -54,7 +54,10 @@
     }
     const result = await response.json().catch(() => ({}));
     if (!result || result.ok !== true) {
-      throw new Error((result && result.message) || "花大夫暂时没有接通，请稍后重试");
+      const detail = result && result.message;
+      throw new Error(detail || (response.ok
+        ? "花大夫返回的内容暂时无法读取，请重新试一次"
+        : `花大夫服务响应异常（HTTP ${response.status}），请稍后重试`));
     }
     return result;
   }
@@ -125,9 +128,19 @@
     const health = ["good", "watch", "sick"].includes(value.health) ? value.health : "watch";
     const trend = ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown";
     const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
+    const currentObservations = Array.isArray(value.currentObservations)
+      ? value.currentObservations
+      : Array.isArray(value.current_observations)
+        ? value.current_observations
+        : value.observations;
+    const previousObservations = Array.isArray(value.previousObservations)
+      ? value.previousObservations
+      : value.previous_observations;
     return {
+      isPlant: value.isPlant !== false && value.is_plant !== false,
       health,
-      observations: Array.isArray(value.observations) ? value.observations.slice(0, 4).map(String).filter(Boolean) : [],
+      observations: Array.isArray(currentObservations) ? currentObservations.slice(0, 4).map(String).filter(Boolean) : [],
+      previousObservations: Array.isArray(previousObservations) ? previousObservations.slice(0, 4).map(String).filter(Boolean) : [],
       likelyCause: String(value.likelyCause || value.likely_cause || "暂时无法判断原因"),
       trend,
       trendSummary: String(value.trendSummary || value.trend_summary || (

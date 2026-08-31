@@ -11,7 +11,7 @@ for (const marker of [
   "enterGuestGarden",
   "guest: true",
   '<EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />',
-  'setStack([{ view: "onboard" }])',
+  'setStack([{ view: hydrated.onboarded ? "diary" : "onboard" }])',
 ]) {
   if (!app.includes(marker)) throw new Error(`missing guest entry marker: ${marker}`);
 }

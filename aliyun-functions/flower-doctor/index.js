@@ -5,6 +5,7 @@ const https = require("https");
 const MODEL = process.env.FLOWER_DOCTOR_MODEL || "qwen3-vl-flash";
 const BASE_URL = (process.env.DASHSCOPE_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "");
 const MAX_IMAGE_LENGTH = 7_500_000;
+const CLOUDBASE_APP_ORIGIN = "https://huahuadiary-d4gajnlumc8432f6c-1322727508.tcloudbaseapp.com";
 
 const SYSTEM_PROMPT = `你是“花大夫”，面向家庭园艺用户的植物养护分诊助手。你的任务是根据照片、植物资料和用户补充信息给出谨慎、可执行的建议。
 规则：
@@ -12,14 +13,15 @@ const SYSTEM_PROMPT = `你是“花大夫”，面向家庭园艺用户的植物
 2. 优先区分浇水、光照、温湿度、病虫害、根系和土壤问题；相似病因要给出辨别方法。
 3. 不给没有依据的精确毫升数。浇水建议优先使用“浇透至盆底少量出水”“土壤干到某深度”等可验证标准。
 4. 涉及农药时先建议隔离、通风和物理清除；提醒遵循产品标签并远离儿童宠物。
-5. 回复中文、温和简洁，每次2至5句话。先说明观察，再给下一步或追问。不要声称你已经检查了照片中看不见的根系、土壤内部或虫体。
+5. 回复中文、温和简洁。聊天回复按需要使用“初步判断：”“现在怎么做：”“需要你确认：”“留意：”四个短段落，每段1至2句；没有内容的段落可以省略。不要使用Markdown粗体符号，不要堆成长文。
 6. 这是分诊和养护建议，不把推测说成确诊。`;
 
 function allowedOrigins() {
-  return String(process.env.ALLOWED_ORIGINS || "http://127.0.0.1:4177,http://localhost:4177")
+  const configured = String(process.env.ALLOWED_ORIGINS || "http://127.0.0.1:4177,http://localhost:4177")
     .split(",")
     .map(value => value.trim())
     .filter(Boolean);
+  return [...new Set([CLOUDBASE_APP_ORIGIN, ...configured])];
 }
 
 function headerValue(headers, name) {
@@ -97,10 +99,17 @@ function normalizeTriage(value) {
   const trend = ["better", "same", "worse", "unknown"].includes(value.trend) ? value.trend : "unknown";
   const routeByHealth = { good: "record", watch: "soft_hint", sick: "diagnose" };
   const route = routeByHealth[health];
+  const currentObservations = Array.isArray(value.current_observations)
+    ? value.current_observations
+    : value.observations;
   return {
+    isPlant: value.is_plant !== false && value.isPlant !== false,
     health,
-    observations: Array.isArray(value.observations)
-      ? value.observations.slice(0, 4).map(item => String(item).slice(0, 90)).filter(Boolean)
+    observations: Array.isArray(currentObservations)
+      ? currentObservations.slice(0, 4).map(item => String(item).slice(0, 90)).filter(Boolean)
+      : [],
+    previousObservations: Array.isArray(value.previous_observations)
+      ? value.previous_observations.slice(0, 4).map(item => String(item).slice(0, 90)).filter(Boolean)
       : [],
     likelyCause: String(value.likely_cause || "暂时无法判断原因").slice(0, 160),
     trend,
@@ -205,8 +214,28 @@ function httpsJson(url, request) {
 
 function parseJson(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const source = fenced ? fenced[1] : text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  return JSON.parse(source);
+  const source = (fenced ? fenced[1] : text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1))
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ")
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
+  try { return JSON.parse(source); } catch (_) {
+    const value = {};
+    const stringKeys = ["symptom", "conclusion", "plan", "urgency", "health", "likely_cause", "trend", "trend_summary", "species", "note", "route"];
+    for (const key of stringKeys) {
+      const match = source.match(new RegExp(`["']?${key}["']?\\s*:\\s*["']([\\s\\S]*?)["'](?=\\s*,|\\s*})`, "i"));
+      if (match) value[key] = match[1].replace(/\\n/g, " ").trim();
+    }
+    const numberKeys = ["followup_days", "confidence"];
+    for (const key of numberKeys) {
+      const match = source.match(new RegExp(`["']?${key}["']?\\s*:\\s*([0-9.]+)`, "i"));
+      if (match) value[key] = Number(match[1]);
+    }
+    const points = source.match(/["']?points["']?\s*:\s*\[([\s\S]*?)\]/i);
+    if (points) value.points = [...points[1].matchAll(/["']([^"']+)["']/g)].map(match => match[1]);
+    if (!Object.keys(value).length) value.plan = String(text || "").replace(/```[a-z]*|```/gi, "").slice(0, 500);
+    return value;
+  }
 }
 
 function normalizeSummary(value) {
@@ -254,13 +283,14 @@ async function execute(payload) {
         route: "soft_hint", confidence: 0,
       }), model: MODEL };
     }
-    const prompt = `健康分诊路由。${plantText(plant)}只根据照片里确实可见的叶片、茎干、土壤和整体状态判断，不要因为植物档案原状态良好就默认健康。黄斑、焦枯、萎蔫、卷边、黑斑或大面积变色必须进入watch或sick，不能返回good。健康状态和前后趋势是两个独立判断：即使比上次好转，当前仍可能需要watch或sick；只有两张照片中存在清晰、可见的对比证据时才能声称better。只输出JSON：{"health":"good|watch|sick","observations":["可见现象"],"likely_cause":"最可能原因；不确定要说明","trend":"better|same|worse|unknown","trend_summary":"与上次相比的可见变化","route":"record|soft_hint|diagnose","confidence":0.0}。明显异常使用sick+diagnose，轻微异常使用watch+soft_hint，只有没有明显异常才用good+record。`;
+    const prompt = `健康分诊路由。${plantText(plant)}第一步必须判断图1主体是否为真实植物。若没有清楚可见的植物主体（例如电脑、人物、家具、纯风景），is_plant必须为false，不得猜测植物状态；只有确有植物主体才能返回true并继续分诊。先分别观察两张照片，再判断当前状态和变化趋势。health只根据图1（本次照片）判断，current_observations也只能记录图1确实可见的证据；图2仅用于比较趋势，previous_observations只能记录图2证据，绝对不得把图2的症状写入图1或据此判定图1生病。图1主体绿色饱满、轮廓完整且没有明确病斑、软腐、萎蔫时，应返回good；图1健康而图2异常时，应返回health=good、trend=better。只有图1本身出现清楚可见的黄斑、焦枯、萎蔫、卷边、黑斑、软腐或大面积异常变色时，才进入watch或sick。健康状态和前后趋势是两个独立判断；只有两张照片存在清晰、可见的对比证据时才能声称better或worse。只输出JSON：{"is_plant":true,"health":"good|watch|sick","current_observations":["图1可见现象"],"previous_observations":["图2可见现象"],"likely_cause":"仅针对图1的最可能原因；健康时写无明显异常","trend":"better|same|worse|unknown","trend_summary":"只描述两张图之间确实可见的变化","route":"record|soft_hint|diagnose","confidence":0.0}。非植物照片必须输出is_plant=false；明显异常使用sick+diagnose，轻微异常使用watch+soft_hint，只有图1没有明显异常才用good+record。`;
     const content = previousImage ? [
-      { type: "text", text: `${prompt}\n图1是本次照片。图2是上一次照片，记录时间：${previousObservedAt || "未知"}。` },
+      { type: "text", text: `${prompt}\n【图1：本次照片】请先只观察下方图1。` },
       { type: "image_url", image_url: { url: image } },
+      { type: "text", text: `【图2：上一次照片】记录时间：${previousObservedAt || "未知"}。图2只用于和图1比较，不代表当前状态。` },
       { type: "image_url", image_url: { url: previousImage } },
     ] : [
-      { type: "text", text: `${prompt}\n这是第一次观察，没有可比较的上一张照片；trend必须返回unknown，trend_summary必须返回“这是第一次观察”。` },
+      { type: "text", text: `${prompt}\n【图1：本次照片】这是第一次观察，没有图2；previous_observations必须为空，trend必须返回unknown，trend_summary必须返回“这是第一次观察”。` },
       { type: "image_url", image_url: { url: image } },
     ];
     const raw = await generate([
@@ -316,4 +346,4 @@ exports.handler = function handler(rawEvent, context, callback) {
   return task;
 };
 
-exports._test = { eventObject, requestBody, safeImage, safeMessages, safeCandidates, normalizeRecognition, normalizeTriage, normalizeSummary, handle };
+exports._test = { allowedOrigins, eventObject, requestBody, safeImage, safeMessages, safeCandidates, normalizeRecognition, normalizeTriage, normalizeSummary, handle };

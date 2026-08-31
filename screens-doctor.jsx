@@ -9,23 +9,32 @@ function DoctorTab({ go }) {
   const byId = Object.fromEntries(plants.map(p => [p.id, p]));
   // Diagnosis diary entries are the source of truth, so the case wall survives reloads
   // without introducing a second copy of the same medical record.
-  const savedCases = plants.flatMap(plant => (plant.diary || [])
-    .filter(entry => entry.kind === "diagnosis" || entry.type === "doctor")
-    .map((entry, index) => ({
+  const savedCases = plants.flatMap(plant => {
+    const diagnoses = (plant.diary || []).filter(entry => entry.kind === "diagnosis" || entry.type === "doctor"
+      || (entry.doctorStatus === "completed" && entry.diagnosis));
+    const entry = diagnoses[0];
+    if (!entry) return [];
+      const diagnosis = entry.diagnosis || entry;
+      return [{
       id: entry.id,
       pid: plant.id,
       no: `No.${String(Math.abs(String(entry.id).split("").reduce((n, c) => n + c.charCodeAt(0), 0)) % 1000).padStart(3, "0")}`,
       date: entry.date || "最近",
       seen: entry.day || "最近",
-      complaint: entry.symptom || "未记录主诉",
-      diagnosis: entry.conclusion || "等待进一步观察",
-      rx: entry.plan || "按病历建议继续观察",
-      status: entry.urgency === "recheck" || entry.urgency === "urgent" ? "recheck" : "recovering",
-      progress: entry.urgency === "urgent" ? 10 : entry.urgency === "recheck" ? 35 : 55,
-      note: `建议 ${entry.followupDays || 7} 天后复查${entry.confidence == null ? "" : ` · 诊断把握 ${Math.round(entry.confidence * 100)}%`}`,
-      _index: index,
-    })));
-  const cases = window.HHCloud && window.HHCloud.demo ? window.CLINIC_CASES : savedCases;
+      complaint: diagnosis.symptom || entry.concern || "未记录主诉",
+      diagnosis: diagnosis.conclusion || "等待进一步观察",
+      rx: diagnosis.plan || "按病历建议继续观察",
+      status: diagnosis.urgency === "recheck" || diagnosis.urgency === "urgent" ? "recheck" : "recovering",
+      progress: diagnosis.urgency === "urgent" ? 10 : diagnosis.urgency === "recheck" ? 35 : 55,
+      note: `建议 ${diagnosis.followupDays || 7} 天后复查${diagnosis.confidence == null ? "" : ` · 诊断把握 ${Math.round(diagnosis.confidence * 100)}%`}`,
+      visitCount: diagnoses.length,
+      }];
+    });
+  const demoCases = (window.CLINIC_CASES || []).filter((c, index, all) => {
+    const identity = `${c.pid}:${c.patientName || ""}`;
+    return all.findIndex(item => `${item.pid}:${item.patientName || ""}` === identity) === index;
+  }).map(c => ({ ...c, visitCount: (window.CLINIC_CASES || []).filter(item => item.pid === c.pid && (item.patientName || "") === (c.patientName || "")).length }));
+  const cases = window.HHCloud && window.HHCloud.demo ? demoCases : savedCases;
   const tabs = window.CLINIC_TABS;
   const [tab, setTab] = useState("all");
 
@@ -206,8 +215,11 @@ function ClinicCaseCard({ c, p, tilt, go }) {
                 <span className="mast" style={{ fontSize: 17 }}>{name}</span>
                 <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{species}</span>
               </div>
-              <span className="badge" style={{ fontSize: 10, padding: "2px 8px", marginTop: 3,
-                background: st.bg, color: st.color }}>● {st.label}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 3 }}>
+                <span className="badge" style={{ fontSize: 10, padding: "2px 8px",
+                  background: st.bg, color: st.color }}>● {st.label}</span>
+                <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>最近一次 · 共 {c.visitCount || 1} 次问诊</span>
+              </div>
             </div>
           </div>
 

@@ -206,7 +206,12 @@ html, body {
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-input, textarea { font-family: inherit; }
+input, textarea { font-family: inherit; font-size: 16px; }
+
+/* iOS Safari enlarges a page when a focused field renders below 16px. */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select { font-size: 16px !important; }
+}
 
 /* ---- The paper canvas that fills the phone screen ---- */
 .canvas {
@@ -819,7 +824,7 @@ input, textarea { font-family: inherit; }
   background: transparent;
   color: #2C3229;
   font-family: var(--f-num);
-  font-size: 15px;
+  font-size: 16px;
   letter-spacing: .1px;
 }
 .collage-email-input::placeholder { color: rgba(73,73,63,.38); }
@@ -1154,13 +1159,11 @@ input, textarea { font-family: inherit; }
 .garden-wall-art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; }
 .garden-generated-print { position:absolute; z-index:2; top:172px; right:27px; width:70px; height:auto; filter:drop-shadow(0 5px 7px rgba(75,57,31,.12)); transform:rotate(.6deg); }
 .garden-generated-chair { position:absolute; z-index:4; left:-20px; bottom:68px; width:170px; height:auto; filter:drop-shadow(0 8px 7px rgba(79,57,32,.14)); }
-.garden-scene-switcher { position:absolute; z-index:12; left:9px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:5px; padding:6px; border-radius:18px; background:rgba(250,247,239,.68); border:1px solid rgba(54,67,57,.13); box-shadow:0 7px 20px rgba(48,39,27,.13); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
-.garden-switch-group { display:flex; flex-direction:column; gap:5px; }
-.garden-switch-divider { width:19px; height:1px; margin:1px auto; background:rgba(40,58,47,.16); }
-.garden-scene-switcher button { width:29px; height:29px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:rgba(38,54,44,.62); border:1px solid transparent; transition:transform .16s ease,background .16s ease,color .16s ease; }
-.garden-scene-switcher button span { font:650 11px/1 var(--f-journal); }
-.garden-scene-switcher button.is-active { color:#fff; background:var(--green-deep); box-shadow:0 3px 9px rgba(30,70,50,.25); }
-.garden-scene-switcher button:active { transform:scale(.92); }
+.garden-page-scroll { position:absolute; z-index:3; inset:0; overflow-y:auto; overflow-x:hidden; scroll-snap-type:y mandatory; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; }
+.garden-shelf-page { position:relative; width:100%; height:100%; min-height:100%; scroll-snap-align:start; scroll-snap-stop:always; }
+.garden-page-cue { position:absolute; z-index:8; left:50%; bottom:142px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 12px; border-radius:999px; color:rgba(34,62,47,.68); background:rgba(249,247,239,.7); border:1px solid rgba(54,67,57,.1); box-shadow:0 4px 13px rgba(48,39,27,.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); pointer-events:none; white-space:nowrap; }
+.garden-page-cue span { font:650 9.5px/1.2 var(--f-journal); letter-spacing:.06em; }
+.garden-page-cue small { font:400 8px/1.2 var(--f-journal); color:var(--ink-faint); }
 .flat-scene-warm .garden-wall-art,.flat-scene-airy .garden-wall-art,.flat-scene-dawn .garden-wall-art,.flat-scene-night .garden-wall-art { filter:saturate(.88) contrast(.96); }
 .garden-wind-shadows { position:absolute; z-index:2; inset:70px 0 92px; overflow:hidden; pointer-events:none; mix-blend-mode:multiply; opacity:.42; }
 .garden-wind-shadows i { position:absolute; width:190px; height:285px; filter:blur(7px); opacity:.22; transform-origin:50% 100%; animation:gardenShadowBreeze 8.5s ease-in-out infinite alternate; }
@@ -1180,8 +1183,9 @@ input, textarea { font-family: inherit; }
 .flat-garden-residents { position:absolute; z-index:2; left:15px; right:15px; bottom:8px; height:88px; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); align-items:end; justify-items:center; }
 .flat-row-count-1 { display:flex; justify-content:center; height:145px; }
 .flat-row-count-1 .flat-garden-plant { width:132px; height:145px; }
-.flat-row-count-1 .flat-garden-plant-art { max-width:128px; }
+.flat-row-count-1 .flat-garden-plant-art { max-width:128px; transform:translateY(7px); }
 .flat-row-count-1 .flat-garden-plant-art img { max-width:128px; }
+.flat-row-count-1 .flat-garden-plant-art::after { bottom:-2px; width:72px; opacity:.82; }
 .flat-rack-board { position:absolute; z-index:2; left:0; right:0; bottom:0; height:9px; border-radius:2px 2px 1px 1px; background:linear-gradient(180deg,#d2aa75 0%,#bd8952 72%,#a87342 100%); box-shadow:var(--cast-x) var(--cast-y) calc(var(--cast-blur) + 2px) var(--cast-color),inset 0 1px rgba(255,241,213,.5); }
 .flat-rack-board::before { content:""; position:absolute; z-index:2; left:2px; right:2px; top:-5px; height:6px; clip-path:polygon(1% 100%,99% 100%,97.5% 0,2.5% 0); background:linear-gradient(180deg,#edd2aa,#d8af78); }
 .flat-rack-board::after { content:""; position:absolute; z-index:-1; left:8px; right:5px; top:8px; height:11px; background:linear-gradient(180deg,rgba(73,48,26,.2),transparent); filter:blur(3px); transform:translateY(2px); }

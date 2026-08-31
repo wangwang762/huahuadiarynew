@@ -10,7 +10,7 @@ const SYSTEM_PROMPT = `你是“花大夫”，面向家庭园艺用户的植物
 2. 优先区分浇水、光照、温湿度、病虫害、根系和土壤问题；相似病因要给出辨别方法。
 3. 不给没有依据的精确毫升数。浇水建议优先使用“浇透至盆底少量出水”“土壤干到某深度”等可验证标准。
 4. 涉及农药时先建议隔离、通风和物理清除；提醒遵循产品标签并远离儿童宠物。
-5. 回复中文、温和简洁，每次2至5句话。先说明观察，再给下一步或追问。不要声称你已经检查了照片中看不见的根系、土壤内部或虫体。
+5. 回复中文、温和简洁。聊天回复按需要使用“初步判断：”“现在怎么做：”“需要你确认：”“留意：”四个短段落，每段1至2句；没有内容的段落可以省略。不要使用Markdown粗体符号，不要堆成长文。
 6. 这是分诊和养护建议，不把推测说成确诊。`;
 
 function safeMessages(input) {
@@ -83,8 +83,28 @@ async function generate(messages, maxTokens) {
 
 function parseJson(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const source = fenced ? fenced[1] : text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  return JSON.parse(source);
+  const source = (fenced ? fenced[1] : text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1))
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ")
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
+  try { return JSON.parse(source); } catch (_) {
+    const value = {};
+    const stringKeys = ["symptom", "conclusion", "plan", "urgency", "health", "likely_cause", "trend", "trend_summary", "species", "note", "route"];
+    for (const key of stringKeys) {
+      const match = source.match(new RegExp(`["']?${key}["']?\\s*:\\s*["']([\\s\\S]*?)["'](?=\\s*,|\\s*})`, "i"));
+      if (match) value[key] = match[1].replace(/\\n/g, " ").trim();
+    }
+    const numberKeys = ["followup_days", "confidence"];
+    for (const key of numberKeys) {
+      const match = source.match(new RegExp(`["']?${key}["']?\\s*:\\s*([0-9.]+)`, "i"));
+      if (match) value[key] = Number(match[1]);
+    }
+    const points = source.match(/["']?points["']?\s*:\s*\[([\s\S]*?)\]/i);
+    if (points) value.points = [...points[1].matchAll(/["']([^"']+)["']/g)].map(match => match[1]);
+    if (!Object.keys(value).length) value.plan = String(text || "").replace(/```[a-z]*|```/gi, "").slice(0, 500);
+    return value;
+  }
 }
 
 function normalizeSummary(value) {

@@ -2,9 +2,11 @@
    花花日记本 · 拍照记录 → AI 分诊
    主人主动拍照 → AI 判断：状态好（情绪文案记录）/ 需诊断（指路花大夫）
    ============================================================ */
-function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry, onUpdateEntry }) {
+function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = false, onSaveEntry, onUpdateEntry }) {
   const p = plant;
-  const [step, setStep] = useState(!intake && initialImage ? "analyzing" : "shoot"); // shoot | analyzing | identify | good | abnormal
+  const hasInitialImage = /^data:image\/(?:jpeg|png|webp|heic|heif);base64,/i.test(String(initialImage || ""));
+  const [step, setStep] = useState(hasInitialImage ? "analyzing" : "shoot"); // shoot | analyzing | identify | good | abnormal
+  const [photoError, setPhotoError] = useState(initialImage && !hasInitialImage ? "没有收到有效照片，请重新选择" : "");
   const [voice, setVoice] = useState("");
   const [saveError, setSaveError] = useState("");
   const [recognition, setRecognition] = useState(null);
@@ -18,22 +20,36 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
   const savedObservationRef = useRef(null);
   const savePromiseRef = useRef(null);
   const autoAnalyzeRef = useRef(false);
-  const previousEntry = (p.diary || []).find(entry =>
-    entry.kind === "record" && /^data:image\/(?:jpeg|png|webp);base64,/.test(entry.photoData || "")
-  ) || null;
+  const autoSaveRef = useRef(false);
+  const previousEntry = [...(p.diary || [])]
+    .filter(entry => entry.kind === "record" && /^data:image\/(?:jpeg|png|webp);base64,/.test(entry.photoData || ""))
+    .sort((a, b) => new Date(b.observedAt || b.createdAt || 0) - new Date(a.observedAt || a.createdAt || 0))[0] || null;
 
   useEffect(() => {
-    if (intake || !initialImage || autoAnalyzeRef.current) return;
+    if (!hasInitialImage || autoAnalyzeRef.current) return;
     autoAnalyzeRef.current = true;
     analyze(initialImage);
-  }, [initialImage, intake]);
+  }, [initialImage, intake, hasInitialImage]);
+
+  useEffect(() => {
+    if (!autoSave || autoSaveRef.current || saveBusy || !triageResult || !storedPhoto || (step !== "good" && step !== "abnormal")) return;
+    autoSaveRef.current = true;
+    const timer = setTimeout(() => saveAndOpenDiary(), 1500);
+    return () => clearTimeout(timer);
+  }, [autoSave, step, triageResult, storedPhoto, saveBusy]);
 
   async function analyze(imageSource = "") {
+    if (!/^data:image\/(?:jpeg|png|webp|heic|heif);base64,/i.test(String(imageSource || ""))) {
+      setPhotoError("没有收到有效照片，请重新拍照或从相册选择");
+      setStep("shoot");
+      return;
+    }
+    setPhotoError("");
     setStep("analyzing");
     // clinic walk-in: AI must first work out WHICH plant this is
     if (intake) {
       setRecognitionError("");
-      const image = await capturePhoto(960, 0.82);
+      const image = imageSource;
       setDiagnosisPhoto(image);
       try {
         const result = await window.HHDoctor.recognize({ image, plants: window.PLANTS });
@@ -66,7 +82,7 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
       }
       return;
     }
-    const image = imageSource || await capturePhoto(960, 0.82);
+    const image = imageSource;
     setDiagnosisPhoto(image);
     setTriageError("");
     try {
@@ -79,19 +95,27 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
           previousObservedAt: previousEntry ? previousEntry.observedAt : "",
         }),
       ]);
+      if (triageResult.isPlant === false) {
+        setStoredPhoto("");
+        setTriageResult(null);
+        setPhotoError("这张照片里没有看到植物，请重新拍摄植物的叶片和花盆");
+        setStep("shoot");
+        return;
+      }
       setStoredPhoto(photoData);
       setTriageResult(triageResult);
-      setVoice(p.voice);
+      setVoice(window.observationVoice(p, triageResult));
       if (triageResult.route === "record") setTimeout(() => setStep("good"), 900);
       if (triageResult.route === "soft_hint") setTimeout(() => setStep("abnormal"), 900);
       if (triageResult.route === "diagnose") setTimeout(() => setStep("abnormal"), 900);
     } catch (error) {
-      setTriageError(error && error.message ? error.message : "这次没有看清照片");
+      setTriageError(error && error.message ? error.message : "花大夫服务暂时没有接通，请稍后重试");
       setTriageResult({
-        health: "watch", route: "soft_hint", observations: ["这次没有看清照片"],
-        likelyCause: "暂时无法判断状态", trend: "unknown",
+        health: "unknown", route: "error", observations: [],
+        likelyCause: "服务暂时没有返回判断", trend: "unknown",
         trendSummary: previousEntry ? "这次暂时无法可靠比较" : "这是第一次观察", confidence: 0,
       });
+      setVoice("这次暂时没看清，不过照片已经留下了，我们下次还能继续比较。");
       setStoredPhoto(await resizeDataImage(image, 720, 0.72));
       setTimeout(() => setStep("abnormal"), 650);
     }
@@ -110,13 +134,13 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
       confidence: Number(result.confidence) || 0,
     };
     return window.makeEntry("record", p, {
-      mood: result.health === "good" ? p.mood : "留心",
-      voice: voice || p.voice,
+      mood: triageError ? "待分析" : result.health === "good" ? p.mood : "留心",
+      voice: voice || window.observationVoice(p, result),
       photo: p.photoId,
       photoData: storedPhoto,
       comparison,
-      doctorStatus: result.health === "good" ? "not_needed" : "suggested",
-      concern: result.health === "good" ? null : observations.join("、"),
+      doctorStatus: triageError ? "pending_analysis" : result.health === "good" ? "not_needed" : "suggested",
+      concern: triageError || result.health === "good" ? null : observations.join("、"),
       quote: [comparison.summary],
     });
   }
@@ -143,7 +167,7 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
     setSaveError("");
     try {
       await ensureSavedObservation();
-      go("plantDiary", p);
+      go("plantDiary", p, { returnHome: true });
     } catch (error) {
       setSaveError(error && error.message ? error.message : "这篇记录没有保存成功，请再试一次");
       setSaveBusy(false);
@@ -240,13 +264,15 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
       background: `linear-gradient(180deg, ${p.soft}aa 0%, var(--paper) 32%)` }}>
       {/* nav */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "54px 16px 6px" }}>
-        <button onClick={() => go("back")} style={{ display: "flex", alignItems: "center", gap: 2, color: "var(--ink-soft)" }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "center", minHeight: 28, padding: "54px 16px 6px" }}>
+        <button onClick={() => go("back")} style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 2, color: "var(--ink-soft)" }}>
           <Icon name="chevL" size={26} color="var(--ink-soft)" />
           <span style={{ fontSize: 15, fontFamily: "var(--f-journal)" }}>返回</span>
         </button>
-        <span style={{ fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{intake ? "带花来看诊" : `记录 ${p.name}`}</span>
-        <span style={{ width: 44 }}></span>
+        <span style={{ position: "absolute", left: "50%", bottom: 6, transform: "translateX(-50%)", whiteSpace: "nowrap",
+          fontFamily: "var(--f-journal)", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+          {intake ? "带花来看诊" : `记录 ${p.name}`}
+        </span>
       </div>
 
       <div className="noscroll" style={{ flex: 1, overflowY: "auto", padding: "10px 24px 30px",
@@ -255,7 +281,7 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
           background: "rgba(200,85,60,.08)", color: "var(--coral)", fontSize: 12.5, textAlign: "center" }}>{saveError}</div>}
 
         {/* ---- the photo ---- */}
-        <div style={{ position: "relative", marginTop: 8 }}>
+        {step !== "shoot" && <div style={{ position: "relative", marginTop: 8 }}>
           <div className="snap" style={{ padding: 8, transform: "rotate(-1.5deg)", borderRadius: 8 }}>
             <image-slot id={`capture-${p.photoId}`} shape="rounded" radius="5" src={diagnosisPhoto || initialImage || window.photoFor(p.photoId)}
               style={{ width: "210px", height: "250px", display: "block" }} placeholder={`拍下 ${p.name} 现在的样子`}></image-slot>
@@ -270,37 +296,24 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
                 boxShadow: `0 0 12px ${p.accent}`, animation: "scanMove 1.4s ease-in-out infinite" }}></div>
             </div>
           )}
-        </div>
-
-        {(step === "good" || step === "abnormal") && triageResult && (
-          <div className="soft-fade" style={{ marginTop: 15, width: "100%", textAlign: "center" }}>
-            <div className="serif" style={{ fontSize: 15.5, lineHeight: 1.55,
-              color: triageResult.trend === "worse" ? "var(--terra)" : triageResult.trend === "better" ? "var(--green-deep)" : "var(--ink-soft)" }}>
-              {triageResult.trendSummary || (previousEntry ? "这次暂时无法比较" : "这是第一次观察")}
-            </div>
-            <div className="kicker" style={{ marginTop: 5, color: "var(--ink-faint)" }}>
-              {previousEntry ? "和上一次照片比较" : "第一张可比较的观察照片"}
-            </div>
-          </div>
-        )}
+        </div>}
 
         {/* ---- step content ---- */}
         {step === "shoot" && intake && (
           <div className="soft-fade" style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <p className="serif" style={{ fontSize: 15, color: "var(--ink-soft)", textAlign: "center", lineHeight: 1.6, maxWidth: 250 }}>
-              拍一张它现在的样子，<br />花花先认认它是谁、瞧瞧哪儿不舒服。
-            </p>
-            <button onClick={analyze} className="btn-green"
-              style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 54, fontSize: 16, display: "flex",
-                alignItems: "center", justifyContent: "center", gap: 9 }}>
-              <Icon name="leaf" size={20} color="#fff" /> 让花花认认它
+            <div className="serif" role="alert" style={{ fontSize: 15, color: "var(--ink-soft)", textAlign: "center", lineHeight: 1.65 }}>
+              {photoError || "还没有选择照片"}<br />返回后重新拍照或从相册选择。
+            </div>
+            <button onClick={() => go("back")} className="btn-green"
+              style={{ marginTop: 22, width: "100%", maxWidth: 300, height: 52, fontSize: 15.5 }}>
+              返回选择照片
             </button>
           </div>
         )}
 
         {step === "shoot" && !intake && (
           <div className="soft-fade" style={{ marginTop: 28, width: "100%", textAlign: "center" }}>
-            <div className="serif" style={{ fontSize: 15, color: "var(--ink-soft)" }}>还没有选中照片</div>
+            <div className="serif" role="alert" style={{ fontSize: 15, color: "var(--ink-soft)" }}>{photoError || "还没有选中照片"}</div>
             <button onClick={() => go("back")} className="btn-ghost" style={{ marginTop: 18, width: 180, height: 46 }}>返回重新拍照</button>
           </div>
         )}
@@ -313,6 +326,30 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
           </div>
         )}
 
+        {autoSave && (step === "good" || step === "abnormal") && (
+          <div className="soft-fade" aria-live="polite" style={{ marginTop: 22, width: "100%", textAlign: "center" }}>
+            <div style={{ width: 42, height: 42, margin: "0 auto", borderRadius: "50%", display: "flex",
+              alignItems: "center", justifyContent: "center", background: step === "good" ? "var(--green-soft)" : "rgba(194,122,78,.12)" }}>
+              <Icon name={step === "good" ? "check" : "leaf"} size={21}
+                color={step === "good" ? "var(--green-deep)" : "var(--terra)"} stroke={2.4} />
+            </div>
+            <div style={{ marginTop: 11, fontFamily: "var(--f-journal)", fontSize: 18, fontWeight: 650,
+              color: step === "good" ? "var(--green-deep)" : "var(--ink)" }}>
+              {triageError ? "照片已收好，状态待分析" : step === "good" ? "今天状态不错" : isSick ? "有几处需要留意" : "有一点变化，继续观察"}
+            </div>
+            <div className="serif" style={{ margin: "7px auto 0", maxWidth: 280, fontSize: 13.5, lineHeight: 1.55, color: "var(--ink-soft)" }}>
+              {triageError ? "这次服务没有返回判断，先把照片留作第一条观察。"
+                : step === "good" ? "暂时没有看到明显异常。"
+                : visibleObservations.length ? `看到${visibleObservations.slice(0, 2).join("、")}。` : "这张照片已经留作后续观察基线。"}
+            </div>
+            <div style={{ marginTop: 13, display: "inline-flex", alignItems: "center", gap: 7,
+              color: "var(--ink-faint)", fontSize: 12.5 }}>
+              <span style={{ display: "inline-flex", gap: 3 }}><i className="dot"></i><i className="dot"></i><i className="dot"></i></span>
+              正在自动写进第一篇日记
+            </div>
+          </div>
+        )}
+
         {/* ---- IDENTIFY: which plant is this? (clinic intake) ---- */}
         {step === "identify" && (
           <IdentifyStep species={(recognition && recognition.species) || "待识别"} candidates={matchedPlants}
@@ -320,7 +357,7 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
         )}
 
         {/* ---- GOOD: emotional record ---- */}
-        {step === "good" && (
+        {step === "good" && !autoSave && (
           <div className="soft-fade" style={{ marginTop: 16, width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14 }}>
               <span style={{ width: 22, height: 22, borderRadius: "50%", background: p.accent, display: "flex",
@@ -351,29 +388,35 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", onSaveEntry
         )}
 
         {/* ---- ABNORMAL: route to doctor ---- */}
-        {step === "abnormal" && (
+        {step === "abnormal" && !autoSave && (
           <div className="soft-fade" style={{ marginTop: 16, width: "100%" }}>
             <div className="glass-card" style={{ padding: "16px 18px", border: "1px solid var(--hairline)" }}>
               <div style={{ fontFamily: "var(--f-journal)", fontSize: 15.5, fontWeight: 650, color: "var(--ink)", marginBottom: 7 }}>
-                {triageError ? "这次没看清，先把照片留下" : isSick ? "有几处变化值得留心" : "发现一点需要继续观察的变化"}
+                {triageError ? "花花暂时没有接通" : isSick ? "有几处变化值得留心" : "发现一点需要继续观察的变化"}
               </div>
               <div className="serif" style={{ fontSize: 15.5, color: "var(--ink)", lineHeight: 1.6 }}>
                 {triageError
-                  ? <>照片会先收进日记，等下次再拍时还能继续比较；也可以带着它问问花大夫。</>
+                  ? <>{triageError}。照片本身已经读取成功，可以重新分析，或先把照片记入日记。</>
                   : <>照片里看到{visibleObservations.length ? visibleObservations.join("、") : "一些变化"}。{triageResult && triageResult.likelyCause ? `可能与${triageResult.likelyCause}有关。` : ""}</>}
               </div>
             </div>
 
-            <button onClick={saveAndOpenDiary} disabled={saveBusy} className="btn-green"
+            {triageError && <button onClick={() => analyze(diagnosisPhoto)} disabled={saveBusy} className="btn-green"
               style={{ marginTop: 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
                 justifyContent: "center", gap: 8, opacity: saveBusy ? .68 : 1 }}>
-              <Icon name="book" size={19} color="#fff" /> {saveBusy ? "正在记下……" : "记入日记"}
+              <Icon name="leaf" size={19} color="#fff" /> 重新分析
+            </button>}
+            <button onClick={saveAndOpenDiary} disabled={saveBusy} className={triageError ? "" : "btn-green"}
+              style={{ marginTop: triageError ? 10 : 20, width: "100%", height: 52, fontSize: 16, display: "flex", alignItems: "center",
+                justifyContent: "center", gap: 8, opacity: saveBusy ? .68 : 1,
+                color: triageError ? "var(--green-deep)" : "#fff" }}>
+              <Icon name="book" size={19} color={triageError ? "var(--green-deep)" : "#fff"} /> {saveBusy ? "正在记下……" : triageError ? "先记入日记" : "记入日记"}
             </button>
-            <button onClick={saveAndOpenDoctor} disabled={saveBusy}
+            {!triageError && <button onClick={saveAndOpenDoctor} disabled={saveBusy}
               style={{ marginTop: 12, width: "100%", minHeight: 42, fontSize: 14.5, color: "var(--green-deep)",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 7, opacity: saveBusy ? .55 : 1 }}>
               <Icon name="doctor" size={18} color="var(--green-deep)" /> 带着这张照片问问花大夫
-            </button>
+            </button>}
             <button onClick={() => setStep("shoot")} disabled={saveBusy}
               style={{ marginTop: 4, width: "100%", fontSize: 13.5, color: "var(--ink-faint)" }}>重拍一张</button>
           </div>
@@ -501,6 +544,8 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
       urgency: diagnosis.urgency,
       confidence: diagnosis.confidence,
       voice: "花大夫看过啦，我会照做的。", photo: photoId,
+      photoData: draft && draft.diagnosisPhoto,
+      photos: draft && draft.diagnosisPhoto ? [draft.diagnosisPhoto] : [],
     });
     const born = {
       id: newP.id + "-d0", day: "今天", date: new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date()),
