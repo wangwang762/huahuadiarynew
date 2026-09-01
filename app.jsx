@@ -7,6 +7,19 @@ const LOGIN_INTRO_KEY = "huahua.loginIntroSeen.v1";
 const GARDEN_FLOOR_GUIDE_KEY = "huahua.gardenFloorGuideSeen.v1";
 const FLOOR_DIRECTION_TOLERANCE = 8;
 const FLOOR_SWITCH_THRESHOLD_RATIO = .18;
+const GARDEN_POCKET_DEAD_ZONE = 20;
+const GARDEN_POCKET_SETTLE_MS = 560;
+
+function getGardenPullDistance(rawDistance, viewportHeight) {
+  const activeDistance = Math.max(0, rawDistance - GARDEN_POCKET_DEAD_ZONE);
+  const resistedDistance = Math.pow(activeDistance, .78) * 2.08;
+  return Math.min(Math.max(0, viewportHeight * .42), resistedDistance);
+}
+
+function getGardenPullProgress(rawDistance, viewportHeight) {
+  const threshold = Math.max(1, viewportHeight * FLOOR_SWITCH_THRESHOLD_RATIO);
+  return Math.min(1, Math.max(0, rawDistance - GARDEN_POCKET_DEAD_ZONE) / threshold);
+}
 
 function shouldShowGardenFloorGuide() {
   try {
@@ -51,9 +64,17 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
   const hostRef = useRef(null);
   const scrollRef = useRef(null);
   const gestureRef = useRef(null);
+  const settleTimerRef = useRef(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const [pocketDepth, setPocketDepth] = useState(0);
   const [guideActive, setGuideActive] = useState(() => shouldShowGardenFloorGuide());
+
+  useEffect(() => () => {
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!guideActive || floor !== "diary") return undefined;
@@ -68,13 +89,36 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     setGuideActive(false);
   }
 
+  function finishPocketMotion(progress = 0, depth = 0) {
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    setSettling(true);
+    setPullProgress(progress);
+    setPocketDepth(depth);
+    settleTimerRef.current = window.setTimeout(() => {
+      setSettling(false);
+      setPullProgress(0);
+      setPocketDepth(0);
+      settleTimerRef.current = null;
+    }, GARDEN_POCKET_SETTLE_MS);
+  }
+
   function openGarden() {
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
     setDragOffset(0);
+    setPullProgress(0);
+    setPocketDepth(0);
+    setSettling(false);
     onFloorChange("garden");
   }
 
   function openDiary() {
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
     setDragOffset(0);
+    setPullProgress(0);
+    setPocketDepth(0);
+    setSettling(false);
     onFloorChange("diary");
   }
 
@@ -82,7 +126,12 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     dismissGuide();
     const touch = event.touches && event.touches[0];
     if (!touch) return;
-    gestureRef.current = { x: touch.clientX, y: touch.clientY, axis: "", offset: 0 };
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
+    setSettling(false);
+    setPullProgress(0);
+    setPocketDepth(0);
+    gestureRef.current = { x: touch.clientX, y: touch.clientY, axis: "", offset: 0, rawDistance: 0, progress: 0 };
   }
 
   function moveGesture(event) {
@@ -98,10 +147,16 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     const height = hostRef.current ? hostRef.current.clientHeight : 0;
     if (floor === "diary") {
       if ((scrollRef.current && scrollRef.current.scrollTop > 0) || dy <= 0) return;
-      gesture.offset = Math.min(height, dy);
+      gesture.rawDistance = Math.min(height, dy);
+      gesture.progress = getGardenPullProgress(gesture.rawDistance, height);
+      gesture.offset = getGardenPullDistance(gesture.rawDistance, height);
+      setPullProgress(gesture.progress);
+      setPocketDepth(gesture.offset);
     } else {
       if (dy >= 0) return;
-      gesture.offset = Math.max(-height, dy);
+      gesture.rawDistance = Math.min(height, -dy);
+      gesture.progress = getGardenPullProgress(gesture.rawDistance, height);
+      gesture.offset = -getGardenPullDistance(gesture.rawDistance, height);
     }
     setDragging(true);
     setDragOffset(gesture.offset);
@@ -110,9 +165,15 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
 
   function endGesture() {
     const gesture = gestureRef.current;
-    const height = hostRef.current ? hostRef.current.clientHeight : 0;
-    const crossed = gesture && Math.abs(gesture.offset) >= height * FLOOR_SWITCH_THRESHOLD_RATIO;
-    if (crossed) onFloorChange(floor === "diary" ? "garden" : "diary");
+    const crossed = gesture && gesture.progress >= 1;
+    const openingGarden = crossed && floor === "diary";
+    if (crossed) onFloorChange(openingGarden ? "garden" : "diary");
+    if (floor === "diary" && gesture && gesture.offset > 0) {
+      finishPocketMotion(openingGarden ? 1 : 0, openingGarden ? gesture.offset : 0);
+    } else {
+      setPullProgress(0);
+      setPocketDepth(0);
+    }
     gestureRef.current = null;
     setDragging(false);
     setDragOffset(0);
@@ -122,11 +183,19 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
   const sheetOffset = dragging
     ? (floor === "garden" ? `calc(100% + ${dragOffset}px)` : `${dragOffset}px`)
     : restingOffset;
+  const pocketVisible = (dragging && dragOffset > 0) || settling;
 
   return <div ref={hostRef} className={`diary-garden-floor floor-${floor}`}
+    style={{ "--garden-pull-progress": pullProgress, "--garden-pocket-depth": `${pocketDepth}px` }}
     onTouchStart={startGesture} onTouchMove={moveGesture} onTouchEnd={endGesture} onTouchCancel={endGesture}>
     <div className="garden-floor-scene">
       <GardenScreen go={go} onReturnHome={openDiary} />
+    </div>
+    <div className={`garden-pocket-preview${pocketVisible ? " is-visible" : ""}${pullProgress >= 1 ? " is-threshold-ready" : ""}`} aria-hidden="true">
+      <div className="garden-pocket-mask"></div>
+      <div className="garden-pocket-window">
+        <span>{pullProgress >= 1 ? "松手去花园" : "花园在这里"}</span>
+      </div>
     </div>
     <div className={`diary-floor-sheet${dragging ? " is-dragging" : ""}${guideActive && floor === "diary" ? " is-guide-active" : ""}`}
       style={{ transform: `translate3d(0, ${sheetOffset}, 0)` }}>
