@@ -15,10 +15,15 @@ for (const marker of [
   "journal-round-stamp",
   "GROW SLOWLY",
   "collage-email-note",
+  "collage-phone-prefix",
   "collage-otp-stamp",
   "assets/plants/final-v1/guibeizhu.png",
   "登录花花日记本",
-  "输入邮箱验证码",
+  '输入{isPhone ? "短信" : "邮箱"}验证码',
+  "使用邮箱登录",
+  "使用手机号登录",
+  "requestPhoneCode",
+  "verifyPhoneCode",
   "跳过登录",
   "onSkip",
 ]) {
@@ -34,6 +39,8 @@ for (const marker of [
   "collageSheetLand",
   "collageStickerDrop",
   "collage-guest-skip",
+  "collage-channel-switch",
+  "is-instant",
 ]) {
   if (!styles.includes(marker)) throw new Error(`missing garden motion marker: ${marker}`);
 }

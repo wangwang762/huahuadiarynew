@@ -14,7 +14,7 @@ for (const marker of ["GardenScreen", "flat-garden", "flat-garden-rack", "flat-w
 for (const marker of ["levelCount", "GardenVisitors", "GardenVisitorArt", "butterfly", "bee", "bird", "flat-garden-sway-cut", "flat-rack-levels-"]) {
   if (!garden.includes(marker)) throw new Error(`adaptive garden motion missing: ${marker}`);
 }
-for (const marker of ["displayedPlants", "gardenPages", "garden-page-scroll", "盆花住在这里", "往上滑，继续逛花园"] ) {
+for (const marker of ["displayedPlants", "gardenPages", "garden-page-scroll", "盆花住在这里", "左右滑，继续逛花园"] ) {
   if (!garden.includes(marker)) throw new Error(`garden quantity preview missing: ${marker}`);
 }
 for (const removed of ["previewCount", "数量预览", "恢复真实数量", "previewMaximum", "garden-quantity-preview"]) {
@@ -46,7 +46,7 @@ for (const forbidden of ["我的小花园", "今日花园", "garden-summary", "g
   if (garden.includes(forbidden)) throw new Error(`old garden framing remains: ${forbidden}`);
 }
 if (garden.includes("flat-rack-post")) throw new Error("wall shelf must not render support legs");
-if (!/screens-garden\.jsx\?v=\d{8}[a-z]/.test(html) || html.includes("screens-widget.jsx")) throw new Error("garden screen is not the active third tab");
+if (!/screens-garden\.jsx\?v=\d{8}[a-z]/.test(html) || html.includes("screens-widget.jsx")) throw new Error("garden screen is not part of the active diary experience");
 if (!/components\.jsx\?v=\d{8}[a-z]/.test(html) || !/styles\.css\?v=\d{8}[a-z]/.test(html)) throw new Error("garden navigation or styles may be stale-cached");
 if (garden.includes("FlatGardenWeather") || garden.includes("flat-garden-weather")) throw new Error("garden weather label should be hidden");
 

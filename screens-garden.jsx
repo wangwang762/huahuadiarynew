@@ -7,7 +7,7 @@ function FlatGardenPlant({ plant, index, total, go }) {
   const height = Math.max(total === 1 ? 94 : 45, Math.min(total === 1 ? 128 : 78, Math.round(baseHeight * scale)));
   return (
     <button className="flat-garden-plant" onClick={() => go("plantDiary", actualPlant)} onContextMenu={event => event.preventDefault()}
-      aria-label={`打开${plant.name}的日记`} style={{ "--plant-delay": `${index * .045}s`, touchAction: "pan-y",
+      aria-label={`打开${plant.name}的日记`} style={{ "--plant-delay": `${index * .045}s`, touchAction: "pan-x",
         userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
       <span className="flat-garden-plant-art" style={{ height }}>
         {src ? <span className="flat-garden-sway-cut">
@@ -120,7 +120,7 @@ function GardenRoomDecor({ weatherKind, scene }) {
   </div>;
 }
 
-function GardenScreen({ go }) {
+function GardenScreen({ go, onReturnHome }) {
   const plants = (window.PLANTS || []).slice(0, 100);
   const gardenRef = React.useRef(null);
   const [weather, setWeather] = useState(() => window.HHWeather && window.HHWeather.current());
@@ -182,11 +182,14 @@ function GardenScreen({ go }) {
             </main>
             {gardenPages.length > 1 && <div className="garden-page-cue">
               <span>{pagePlants.length} 盆花住在这里</span>
-              {pageIndex < gardenPages.length - 1 && <small>往上滑，继续逛花园</small>}
+              {pageIndex < gardenPages.length - 1 && <small>左右滑，继续逛花园</small>}
             </div>}
           </section>;
         })}
       </div>
+      <button className="garden-floor-return" onClick={onReturnHome} aria-label="返回日记本首页">
+        <span aria-hidden="true"></span>上滑回日记本
+      </button>
     </div>
   );
 }

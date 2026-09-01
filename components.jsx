@@ -78,6 +78,7 @@ function Icon({ name, size = 24, color = "currentColor", stroke = 1.8, fill = fa
     clock: <><circle cx="12" cy="12" r="8" {...p}/><path d="M12 8v4.5l3 1.6" {...p}/></>,
     pin: <><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z" {...p}/><circle cx="12" cy="10" r="2.5" {...p}/></>,
     mail: <><rect x="3.5" y="5.5" width="17" height="13" rx="2.5" {...p}/><path d="m5 8 7 5 7-5" {...p}/></>,
+    phone: <><path d="M8.3 4.2 10 8.1 7.8 9.7c1.3 2.8 3.6 5.1 6.4 6.4l1.7-2.2 3.9 1.7-.2 3c-7.8 1-15.2-6.4-14.2-14.2z" {...p}/></>,
     user: <><circle cx="12" cy="8.2" r="3.3" {...p}/><path d="M5.5 20c.5-4.1 2.7-6.2 6.5-6.2s6 2.1 6.5 6.2" {...p}/></>,
   };
   return (

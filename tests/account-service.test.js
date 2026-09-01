@@ -3,6 +3,7 @@ const vm = require("vm");
 
 let session = null;
 let loginCount = 0;
+let phoneLoginCount = 0;
 let emptyVerifyResponse = false;
 const auth = {
   async getSession() { return { data: { session }, error: null }; },
@@ -27,6 +28,23 @@ const auth = {
       error: null,
     };
   },
+  async getVerification({ phone_number }) {
+    return { verification_id: `sms-${phone_number}`, is_user: phoneLoginCount > 0 };
+  },
+  async signInWithSms({ verificationInfo, verificationCode, phoneNum }) {
+    if (!verificationInfo || verificationCode !== "123456") {
+      return { data: null, error: { message: "invalid verification token" } };
+    }
+    phoneLoginCount += 1;
+    const user = {
+      id: "phone-user-id",
+      phone_number: phoneNum,
+      created_at: "2026-08-31T08:00:00.000Z",
+      last_sign_in_at: phoneLoginCount === 1 ? "2026-08-31T08:00:00.000Z" : "2026-08-31T09:00:00.000Z",
+    };
+    session = { user, access_token: "phone-token" };
+    return { data: { user, session }, error: null };
+  },
   async verifyOtp() { throw new Error("fallback verifier should not be used"); },
   async signOut() { session = null; return { error: null }; },
 };
@@ -42,6 +60,8 @@ vm.runInContext(fs.readFileSync("account-service.js", "utf8"), context);
   const api = window.HHAccount;
   if (api.mode !== "cloudbase") throw new Error("CloudBase mode is not active");
   if (api.isValidEmail("wrong")) throw new Error("invalid email accepted");
+  if (api.isValidPhone("123") || !api.isValidPhone("138 0000 0000")) throw new Error("phone validation failed");
+  if (api.normalizePhone("+86 138-0000-0000") !== "+86 13800000000") throw new Error("phone normalization failed");
 
   auth.getSession = async () => { throw new Error("credentials not found"); };
   if (await api.restoreSession() !== null) throw new Error("missing credentials should mean signed out");
@@ -75,7 +95,21 @@ vm.runInContext(fs.readFileSync("account-service.js", "utf8"), context);
   const delayedResult = await api.verifyEmailCode(delayed.email, "654321", delayed.verificationInfo);
   if (delayedResult.account.id !== "cloud-user-id") throw new Error("session fallback did not recover account");
 
-  console.log("STANDARD_EMAIL_OTP_FLOW_OK");
+  await api.signOut();
+  rejected = false;
+  try { await api.requestPhoneCode("123"); } catch (_) { rejected = true; }
+  if (!rejected) throw new Error("invalid phone request accepted");
+  const phoneSent = await api.requestPhoneCode("138 0000 0000");
+  if (phoneSent.phone !== "+86 13800000000" || !phoneSent.verificationInfo.verification_id) throw new Error("phone send failed");
+  rejected = false;
+  try { await api.verifyPhoneCode(phoneSent.phone, "000000", phoneSent.verificationInfo); } catch (_) { rejected = true; }
+  if (!rejected) throw new Error("wrong phone OTP accepted");
+  const phoneLogin = await api.verifyPhoneCode(phoneSent.phone, "123456", phoneSent.verificationInfo);
+  if (!phoneLogin.isNew || phoneLogin.account.id !== "phone-user-id" || phoneLogin.account.phone !== "+86 13800000000") {
+    throw new Error("phone OTP login failed");
+  }
+
+  console.log("PHONE_PRIMARY_OTP_FLOW_OK");
 })().catch(error => {
   console.error(error);
   process.exit(1);

@@ -1,5 +1,5 @@
 /* ============================================================
-   花花日记本 MVP · CloudBase email OTP account boundary
+   花花日记本 MVP · CloudBase phone-first OTP account boundary
    ============================================================ */
 (function () {
   let currentAccount = null;
@@ -13,11 +13,21 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizeEmail(email));
   }
 
+  function normalizePhone(phone) {
+    const digits = String(phone || "").replace(/\D/g, "");
+    const local = digits.startsWith("86") && digits.length === 13 ? digits.slice(2) : digits;
+    return /^1\d{10}$/.test(local) ? `+86 ${local}` : local;
+  }
+
+  function isValidPhone(phone) {
+    return /^\+86 1\d{10}$/.test(normalizePhone(phone));
+  }
+
   function readableError(error, fallback) {
     const raw = String(error && (error.message || error.error_description || error.code) || "").toLowerCase();
     if (raw.includes("rate") || raw.includes("frequent") || raw.includes("too many")) return new Error("信寄得有点频繁，请稍等一会儿再试");
-    if (raw.includes("expired")) return new Error("这封信已经失效，请重新获取验证码");
-    if (raw.includes("invalid") || raw.includes("token") || raw.includes("verification")) return new Error("验证码不对，再看看邮件里的六位数字");
+    if (raw.includes("expired")) return new Error("验证码已经失效，请重新获取");
+    if (raw.includes("invalid") || raw.includes("token") || raw.includes("verification")) return new Error("验证码不对，再看看收到的六位数字");
     if (raw.includes("network") || raw.includes("fetch") || raw.includes("timeout")) return new Error("花园门口的网络有点拥挤，请稍后再试");
     return new Error(fallback || "花园暂时没有连上，请稍后再试");
   }
@@ -35,7 +45,20 @@
     );
     const id = user.id || user.uid || user._id || user.sub;
     if (!id) return null;
-    return { id, email, emailVerified: true, onboarded: false };
+    const phone = normalizePhone(
+      user.phone_number || user.phoneNumber || user.phone ||
+      (user.user_metadata && (user.user_metadata.phone_number || user.user_metadata.phone)) ||
+      (Array.isArray(user.identities) && user.identities.find(identity => identity && identity.identity_data && identity.identity_data.phone_number)
+        && user.identities.find(identity => identity && identity.identity_data && identity.identity_data.phone_number).identity_data.phone_number)
+    );
+    return {
+      id,
+      email,
+      phone: isValidPhone(phone) ? phone : "",
+      emailVerified: !!email,
+      phoneVerified: isValidPhone(phone),
+      onboarded: false,
+    };
   }
 
   function sessionUser(result) {
@@ -106,6 +129,21 @@
     }
   }
 
+  async function requestPhoneCode(rawPhone) {
+    const phone = normalizePhone(rawPhone);
+    if (!isValidPhone(phone)) throw new Error("请输入正确的 11 位手机号");
+    try {
+      const { auth } = window.HHCloud.get();
+      const verificationInfo = await auth.getVerification({ phone_number: phone });
+      const error = resultError(verificationInfo);
+      if (error) throw error;
+      pendingVerifications.set(`phone:${phone}`, verificationInfo);
+      return { phone, verificationInfo, expiresIn: 600 };
+    } catch (error) {
+      throw readableError(error, "短信没有发出去，请稍后再试");
+    }
+  }
+
   async function verifyEmailCode(rawEmail, rawCode, verificationInfo) {
     const email = normalizeEmail(rawEmail);
     const code = String(rawCode || "").replace(/\D/g, "").slice(0, 6);
@@ -128,6 +166,34 @@
       return { account: currentAccount, isNew };
     } catch (error) {
       throw readableError(error, "验证码不对，再看看邮件里的六位数字");
+    }
+  }
+
+  async function verifyPhoneCode(rawPhone, rawCode, verificationInfo) {
+    const phone = normalizePhone(rawPhone);
+    const code = String(rawCode || "").replace(/\D/g, "").slice(0, 6);
+    if (!isValidPhone(phone)) throw new Error("请输入正确的 11 位手机号");
+    if (code.length !== 6) throw new Error("请输入完整的 6 位验证码");
+    const pending = pendingVerifications.get(`phone:${phone}`) || verificationInfo;
+    if (!pending) throw new Error("请先获取短信验证码");
+    try {
+      const { auth } = window.HHCloud.get();
+      const result = await auth.signInWithSms({
+        verificationInfo: pending,
+        verificationCode: code,
+        phoneNum: phone,
+      });
+      const error = resultError(result);
+      if (error) throw error;
+      const resolved = await accountFromResultOrSession(auth, result);
+      currentAccount = resolved.account;
+      if (!currentAccount) throw new Error("登录成功，但没有取得用户身份");
+      pendingVerifications.delete(`phone:${phone}`);
+      const user = resolved.user || {};
+      const isNew = Boolean(user.created_at && (!user.last_sign_in_at || user.created_at === user.last_sign_in_at));
+      return { account: currentAccount, isNew };
+    } catch (error) {
+      throw readableError(error, "验证码不对，再看看短信里的六位数字");
     }
   }
 
@@ -154,10 +220,14 @@
     mode: "cloudbase",
     normalizeEmail,
     isValidEmail,
+    normalizePhone,
+    isValidPhone,
     getCurrentAccount,
     restoreSession,
     requestEmailCode,
     verifyEmailCode,
+    requestPhoneCode,
+    verifyPhoneCode,
     markOnboarded,
     signOut,
   };

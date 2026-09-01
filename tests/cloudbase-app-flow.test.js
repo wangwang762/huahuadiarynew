@@ -10,7 +10,7 @@ for (const marker of ["restoreSession", "HHData.bootstrap", "花园暂时没有�
 for (const marker of [
   "enterGuestGarden",
   "guest: true",
-  '<EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />',
+  '<EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} playIntro={!!top.playIntro} />',
   'setStack([{ view: hydrated.onboarded ? "diary" : "onboard" }])',
 ]) {
   if (!app.includes(marker)) throw new Error(`missing guest entry marker: ${marker}`);

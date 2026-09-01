@@ -1,8 +1,154 @@
 /* ============================================================
    花花日记本 · App shell / router (history stack)
-   Tabs: 日记 · 花大夫 · 花园
+   日记是唯一一级入口；花园作为“二楼”，花大夫从异常记录进入
    ============================================================ */
-const TABS = ["diary", "doctor", "garden"];
+const ROOT_VIEWS = ["diary"];
+const LOGIN_INTRO_KEY = "huahua.loginIntroSeen.v1";
+const GARDEN_FLOOR_GUIDE_KEY = "huahua.gardenFloorGuideSeen.v1";
+const FLOOR_DIRECTION_TOLERANCE = 8;
+const FLOOR_SWITCH_THRESHOLD_RATIO = .18;
+
+function shouldShowGardenFloorGuide() {
+  try {
+    return !window.localStorage.getItem(GARDEN_FLOOR_GUIDE_KEY);
+  } catch (_) {
+    return true;
+  }
+}
+
+function markGardenFloorGuideSeen() {
+  try {
+    window.localStorage.setItem(GARDEN_FLOOR_GUIDE_KEY, "1");
+  } catch (_) {}
+}
+
+function GlobalCaptureButton({ go }) {
+  const inputRef = useRef(null);
+
+  function choosePhoto() {
+    if (inputRef.current) inputRef.current.click();
+  }
+
+  function openCapture(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => go("capture", window.UNKNOWN_PLANT, { intake: true, image: reader.result });
+    reader.readAsDataURL(file);
+  }
+
+  return <>
+    <input ref={inputRef} className="global-capture-input" type="file" accept="image/*" capture="environment"
+      onChange={openCapture} aria-label="拍照或从相册选择植物照片" />
+    <button className="global-capture-button" onClick={choosePhoto} aria-label="拍照记今天">
+      <Icon name="camera" size={24} color="#fff" />
+    </button>
+  </>;
+}
+
+function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
+  const hostRef = useRef(null);
+  const scrollRef = useRef(null);
+  const gestureRef = useRef(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [guideActive, setGuideActive] = useState(() => shouldShowGardenFloorGuide());
+
+  useEffect(() => {
+    if (!guideActive || floor !== "diary") return undefined;
+    markGardenFloorGuideSeen();
+    const timer = window.setTimeout(() => setGuideActive(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [guideActive, floor]);
+
+  function dismissGuide() {
+    if (!guideActive) return;
+    markGardenFloorGuideSeen();
+    setGuideActive(false);
+  }
+
+  function openGarden() {
+    setDragOffset(0);
+    onFloorChange("garden");
+  }
+
+  function openDiary() {
+    setDragOffset(0);
+    onFloorChange("diary");
+  }
+
+  function startGesture(event) {
+    dismissGuide();
+    const touch = event.touches && event.touches[0];
+    if (!touch) return;
+    gestureRef.current = { x: touch.clientX, y: touch.clientY, axis: "", offset: 0 };
+  }
+
+  function moveGesture(event) {
+    const gesture = gestureRef.current;
+    const touch = event.touches && event.touches[0];
+    if (!gesture || !touch) return;
+    const dx = touch.clientX - gesture.x;
+    const dy = touch.clientY - gesture.y;
+    if (!gesture.axis && Math.max(Math.abs(dx), Math.abs(dy)) >= FLOOR_DIRECTION_TOLERANCE) {
+      gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    if (gesture.axis !== "y") return;
+    const height = hostRef.current ? hostRef.current.clientHeight : 0;
+    if (floor === "diary") {
+      if ((scrollRef.current && scrollRef.current.scrollTop > 0) || dy <= 0) return;
+      gesture.offset = Math.min(height, dy);
+    } else {
+      if (dy >= 0) return;
+      gesture.offset = Math.max(-height, dy);
+    }
+    setDragging(true);
+    setDragOffset(gesture.offset);
+    if (event.cancelable) event.preventDefault();
+  }
+
+  function endGesture() {
+    const gesture = gestureRef.current;
+    const height = hostRef.current ? hostRef.current.clientHeight : 0;
+    const crossed = gesture && Math.abs(gesture.offset) >= height * FLOOR_SWITCH_THRESHOLD_RATIO;
+    if (crossed) onFloorChange(floor === "diary" ? "garden" : "diary");
+    gestureRef.current = null;
+    setDragging(false);
+    setDragOffset(0);
+  }
+
+  const restingOffset = floor === "garden" ? "100%" : "0px";
+  const sheetOffset = dragging
+    ? (floor === "garden" ? `calc(100% + ${dragOffset}px)` : `${dragOffset}px`)
+    : restingOffset;
+
+  return <div ref={hostRef} className={`diary-garden-floor floor-${floor}`}
+    onTouchStart={startGesture} onTouchMove={moveGesture} onTouchEnd={endGesture} onTouchCancel={endGesture}>
+    <div className="garden-floor-scene">
+      <GardenScreen go={go} onReturnHome={openDiary} />
+    </div>
+    <div className={`diary-floor-sheet${dragging ? " is-dragging" : ""}${guideActive && floor === "diary" ? " is-guide-active" : ""}`}
+      style={{ transform: `translate3d(0, ${sheetOffset}, 0)` }}>
+      <DiaryHome go={go} t={t} onAccount={onAccount} scrollRef={scrollRef} />
+      {guideActive && floor === "diary" && <div className="garden-floor-guide" aria-hidden="true">
+        <span>下拉看看，花园住在二楼</span>
+        <i></i>
+      </div>}
+    </div>
+    <GlobalCaptureButton go={go} />
+  </div>;
+}
+
+function shouldPlayLoginIntro() {
+  try {
+    if (window.sessionStorage.getItem(LOGIN_INTRO_KEY)) return false;
+    window.sessionStorage.setItem(LOGIN_INTRO_KEY, "1");
+    return true;
+  } catch (_) {
+    return true;
+  }
+}
 
 function hasStartedGarden(garden) {
   return !!(garden && garden.profile && garden.profile.onboarded)
@@ -26,12 +172,11 @@ function collapseDuplicateObservations(plants) {
 function App({ t = {} }) {
   const [, force] = useState(0);
   const [, setPlants] = useState([]);
-  const initTab = (typeof location !== "undefined" && /[?&#]tab=(\w+)/.exec(location.hash + location.search) || [])[1];
   const [account, setAccount] = useState(null);
-  const [stack, setStack] = useState([{ view: "email" }]);
+  const [stack, setStack] = useState([{ view: "email", playIntro: false }]);
+  const [mainFloor, setMainFloor] = useState("diary");
   const [boot, setBoot] = useState({ status: "loading", error: "" });
   const top = stack[stack.length - 1];
-  const baseTab = stack[0].view;
 
   useEffect(() => { bootGarden(); }, []);
 
@@ -43,7 +188,7 @@ function App({ t = {} }) {
         window.PLANTS = [];
         setPlants([]);
         setAccount(null);
-        setStack([{ view: "email" }]);
+        setStack([{ view: "email", playIntro: shouldPlayLoginIntro() }]);
         setBoot({ status: "ready", error: "" });
         return;
       }
@@ -54,7 +199,7 @@ function App({ t = {} }) {
       window.PLANTS = plants;
       window.CACTUS = plants[0] || null;
       setPlants([...plants]);
-      setStack([{ view: hydrated.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard" }]);
+      setStack([{ view: hydrated.onboarded ? "diary" : "onboard" }]);
       setBoot({ status: "ready", error: "" });
     } catch (error) {
       setBoot({ status: "error", error: error && error.message ? error.message : "花园暂时没有连上" });
@@ -78,7 +223,7 @@ function App({ t = {} }) {
       setStack([{ view: "diary" }, { view: "plantDiary", plant }]);
       return;
     }
-    if (TABS.includes(dest)) { setStack([{ view: dest, plant }]); return; }
+    if (ROOT_VIEWS.includes(dest)) { setMainFloor("diary"); setStack([{ view: dest, plant }]); return; }
     setStack(s => [...s, { view: dest, plant: plant || top.plant, ...(opts || {}) }]);
   }
   async function archiveNewPlant(newPlant) {
@@ -98,7 +243,7 @@ function App({ t = {} }) {
     window.PLANTS = window.PLANTS.filter(item => item.id !== plant.id);
     window.CACTUS = window.PLANTS[0] || null;
     setPlants([...window.PLANTS]);
-    setStack(current => [{ view: TABS.includes(current[0] && current[0].view) ? current[0].view : "diary" }]);
+    setStack([{ view: "diary" }]);
   }
   async function signOut() {
     await window.HHAccount.signOut();
@@ -106,7 +251,7 @@ function App({ t = {} }) {
     window.CACTUS = null;
     setPlants([]);
     setAccount(null);
-    setStack([{ view: "email" }]);
+    setStack([{ view: "email", playIntro: false }]);
     if (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)) {
       const cleanEntry = `${window.location.origin}${window.location.pathname}?signedout=${Date.now()}`;
       setTimeout(() => window.location.replace(cleanEntry), 30);
@@ -117,7 +262,7 @@ function App({ t = {} }) {
       go("account");
       return;
     }
-    setStack([{ view: "email" }]);
+    setStack([{ view: "email", playIntro: false }]);
   }
   async function finishOnboard(newPlant, firstPhoto) {
     const validFirstPhoto = typeof firstPhoto === "string"
@@ -143,7 +288,7 @@ function App({ t = {} }) {
     const hydrated = { ...result.account, onboarded: hasStartedGarden(garden) };
     setAccount(hydrated);
     setPlants([...garden.plants]);
-    const next = hydrated.onboarded ? (TABS.includes(initTab) ? initTab : "diary") : "onboard";
+    const next = hydrated.onboarded ? "diary" : "onboard";
     setStack([{ view: next }]);
   }
   async function enterGuestGarden() {
@@ -180,22 +325,20 @@ function App({ t = {} }) {
     return <GardenBootScreen error={boot.status === "error" ? boot.error : ""} onRetry={bootGarden} />;
   }
 
-  const isOverlay = !TABS.includes(top.view);
+  const isOverlay = !ROOT_VIEWS.includes(top.view);
 
   return (
     <div className="canvas">
-      {/* base tab (hidden under overlays) */}
-      {!isOverlay && baseTab === "diary" && <DiaryHome go={go} t={t}
-        onAccount={openAccount} />}
-      {!isOverlay && baseTab === "doctor" && <DoctorTab go={go} />}
-      {!isOverlay && baseTab === "garden" && <GardenScreen go={go} />}
+      {/* diary home and its immersive second-floor garden */}
+      {!isOverlay && <DiaryGardenFloor go={go} t={t} onAccount={openAccount}
+        floor={mainFloor} onFloorChange={setMainFloor} />}
 
       {/* overlays */}
-      {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} />}
+      {top.view === "email" && <EmailEntry onEnter={enterGarden} onSkip={enterGuestGarden} playIntro={!!top.playIntro} />}
       {top.view === "onboard" && <Onboard startAtSpecies={!!top.startAtSpecies}
         onComplete={finishOnboard} onSkip={() => finishOnboard(null)} />}
       {top.view === "plantDiary" && <PlantDiary go={go} plant={top.plant} t={t} onSave={savePlant}
-        returnLabel={baseTab === "garden" ? "花园" : "日记本"} />}
+        returnLabel="日记本" />}
       {top.view === "capture" && <CaptureFlow go={go} plant={top.plant} intake={!!top.intake}
         initialImage={top.image} autoSave={!!top.autoSave}
         onSaveEntry={addEntry} onUpdateEntry={updateEntry} />}
@@ -205,8 +348,6 @@ function App({ t = {} }) {
       {top.view === "profile" && <ProfileScreen go={go} plant={top.plant} onSave={savePlant} />}
       {top.view === "deletePlant" && <PlantDeleteConfirm plant={top.plant} onCancel={() => go("back")} onDelete={deletePlant} />}
       {top.view === "account" && <AccountScreen go={go} account={account} plantCount={window.PLANTS.length} onSignOut={signOut} />}
-
-      {!isOverlay && <BottomNav tab={baseTab} onTab={go} />}
     </div>
   );
 }

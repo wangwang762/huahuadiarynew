@@ -4,7 +4,9 @@ function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const isGuest = !!(account && account.guest);
-  const email = account && account.email || "游客模式";
+  const phone = account && account.phone || "";
+  const email = account && account.email || "";
+  const primaryIdentity = phone || email || "游客模式";
 
   async function leave() {
     if (busy) return;
@@ -38,7 +40,7 @@ function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
         <div style={{ marginTop: 14, fontFamily: "var(--f-journal)", fontSize: 22, fontWeight: 650, color: "var(--ink)" }}>
           {isGuest ? "花园访客" : "花园主人"}
         </div>
-        <div style={{ marginTop: 5, fontSize: 13, color: "var(--ink-faint)" }}>{email}</div>
+        <div style={{ marginTop: 5, fontSize: 13, color: "var(--ink-faint)" }}>{primaryIdentity}</div>
       </div>
 
       <div style={{ marginTop: 28, padding: "4px 18px", borderRadius: 20, background: "rgba(255,253,247,.72)",
@@ -47,6 +49,15 @@ function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
           <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>我的花花</span>
           <span style={{ fontFamily: "var(--f-num)", fontSize: 15, fontWeight: 700, color: "var(--green-deep)" }}>{plantCount} 盆</span>
         </div>
+        {!isGuest && <div style={{ minHeight: 58, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--hairline)" }}>
+          <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>手机号</span>
+          <span style={{ fontSize: 12, color: phone ? "var(--green-deep)" : "var(--ink-faint)" }}>{phone || "未绑定"}</span>
+        </div>}
+        {!isGuest && <div style={{ minHeight: 58, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--hairline)" }}>
+          <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>备用邮箱</span>
+          <span style={{ maxWidth: 195, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12,
+            color: email ? "var(--green-deep)" : "var(--ink-faint)" }}>{email || "未绑定"}</span>
+        </div>}
         <div style={{ minHeight: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>数据保存</span>
           <span style={{ fontSize: 12, color: isGuest ? "var(--ink-faint)" : "var(--green-deep)" }}>{isGuest ? "仅保存在本机" : "已同步至云端"}</span>
@@ -54,7 +65,7 @@ function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
       </div>
 
       <div className="serif" style={{ margin: "16px 7px 0", fontSize: 12.5, lineHeight: 1.65, color: "var(--ink-faint)", textAlign: "center" }}>
-        退出登录不会删除植物、照片和日记，下一次使用同一邮箱登录后仍可继续查看。
+        退出登录不会删除植物、照片和日记。手机号与邮箱只有完成绑定后，才会进入同一个花园账号。
       </div>
       <button onClick={() => setConfirming(true)} style={{ width: "100%", height: 49, marginTop: 26, borderRadius: 999,
         color: "var(--coral)", border: "1px solid rgba(191,91,67,.28)", background: "rgba(255,253,247,.55)", fontSize: 15, fontWeight: 600 }}>

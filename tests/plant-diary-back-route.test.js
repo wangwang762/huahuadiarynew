@@ -5,8 +5,8 @@ const plant = fs.readFileSync("screens-plant.jsx", "utf8");
 
 if (!plant.includes('onClick={() => go("back")}')) throw new Error("plant diary must return through the route stack");
 if (plant.includes('onClick={() => go("home")}')) throw new Error("plant diary still forces return to the diary homepage");
-if (!app.includes('returnLabel={baseTab === "garden" ? "花园" : "日记本"}')) {
-  throw new Error("plant diary return label does not reflect its source tab");
+if (!app.includes('returnLabel="日记本"')) {
+  throw new Error("plant diary return label does not reflect the diary-first shell");
 }
 
 console.log("PLANT_DIARY_BACK_ROUTE_OK");

@@ -1,10 +1,10 @@
 /* ============================================================
-   花花日记本 MVP · standard email OTP
-   Two steps revealed behind a one-time field-journal cover.
+   花花日记本 MVP · phone-first OTP, email fallback
+   The field-journal cover only opens on the first app entry.
    ============================================================ */
-function MinimalJournalScene({ settled = false }) {
+function MinimalJournalScene({ settled = false, instant = false }) {
   return (
-    <div className={`collage-login-stage${settled ? " is-settled" : ""}`} aria-hidden="true">
+    <div className={`collage-login-stage${settled ? " is-settled" : ""}${instant ? " is-instant" : ""}`} aria-hidden="true">
       <div className="collage-corkboard"></div>
       <div className="collage-field-sheet-back"></div>
       <div className="collage-field-sheet">
@@ -41,8 +41,10 @@ function MinimalJournalScene({ settled = false }) {
   );
 }
 
-function EmailEntry({ onEnter, onSkip }) {
-  const [step, setStep] = useState("email");
+function EmailEntry({ onEnter, onSkip, playIntro = true }) {
+  const [channel, setChannel] = useState("phone");
+  const [step, setStep] = useState("identity");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [verificationInfo, setVerificationInfo] = useState(null);
@@ -50,7 +52,9 @@ function EmailEntry({ onEnter, onSkip }) {
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
   const codeInput = useRef(null);
-  const valid = window.HHAccount.isValidEmail(email);
+  const isPhone = channel === "phone";
+  const identity = isPhone ? phone : email;
+  const valid = isPhone ? window.HHAccount.isValidPhone(phone) : window.HHAccount.isValidEmail(email);
   const paperDate = new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" })
     .format(new Date()).replace("/", " / ");
 
@@ -72,19 +76,22 @@ function EmailEntry({ onEnter, onSkip }) {
     if (event) event.preventDefault();
     setError("");
     if (!valid) {
-      setError("再检查一下邮箱格式，好像少了点什么");
+      setError(isPhone ? "再检查一下手机号，好像少了点什么" : "再检查一下邮箱格式，好像少了点什么");
       return;
     }
     setBusy(true);
     try {
-      const result = await window.HHAccount.requestEmailCode(email);
-      setEmail(result.email);
+      const result = isPhone
+        ? await window.HHAccount.requestPhoneCode(phone)
+        : await window.HHAccount.requestEmailCode(email);
+      if (isPhone) setPhone(result.phone);
+      else setEmail(result.email);
       setVerificationInfo(result.verificationInfo);
       setCode("");
       setSeconds(60);
       setStep("code");
     } catch (err) {
-      setError(err && err.message ? err.message : "这封信没寄出去，请再试一次");
+      setError(err && err.message ? err.message : "验证码没有送到，请再试一次");
     } finally {
       setBusy(false);
     }
@@ -100,7 +107,9 @@ function EmailEntry({ onEnter, onSkip }) {
     }
     setBusy(true);
     try {
-      const result = await window.HHAccount.verifyEmailCode(email, code, verificationInfo);
+      const result = isPhone
+        ? await window.HHAccount.verifyPhoneCode(phone, code, verificationInfo)
+        : await window.HHAccount.verifyEmailCode(email, code, verificationInfo);
       await onEnter(result);
     } catch (err) {
       setError(err && err.message ? err.message : "花园门口有点拥挤，请再试一次");
@@ -109,8 +118,17 @@ function EmailEntry({ onEnter, onSkip }) {
     }
   }
 
-  function editEmail() {
-    setStep("email");
+  function editIdentity() {
+    setStep("identity");
+    setCode("");
+    setVerificationInfo(null);
+    setSeconds(0);
+    setError("");
+  }
+
+  function switchChannel() {
+    setChannel(value => value === "phone" ? "email" : "phone");
+    setStep("identity");
     setCode("");
     setVerificationInfo(null);
     setSeconds(0);
@@ -131,33 +149,38 @@ function EmailEntry({ onEnter, onSkip }) {
 
   return (
     <div className="collage-login-page soft-fade">
-      <MinimalJournalScene settled={step === "code"} />
-      <main className="collage-login-form collage-form-reveal">
+      <MinimalJournalScene settled={step === "code"} instant={!playIntro} />
+      <main className={`collage-login-form collage-form-reveal${!playIntro ? " is-instant" : ""}`}>
         <div className="collage-form-meta">
           <span>HUĀHUĀ FIELD NOTES</span>
           <span>{paperDate}</span>
         </div>
-        {step === "email" ? (
+        {step === "identity" ? (
           <div className="soft-fade">
             <div className="collage-login-heading">
               <div className="collage-login-title">登录花花日记本</div>
             </div>
 
             <form onSubmit={sendCode} noValidate className="collage-login-fields">
-              <label htmlFor="mvp-email" className="collage-field-label">邮箱</label>
+              <label htmlFor="mvp-identity" className="collage-field-label">{isPhone ? "手机号" : "邮箱"}</label>
               <div className={`collage-email-note${error ? " has-error" : valid ? " is-valid" : ""}`}>
-                <Icon name="mail" size={19} color={error ? "var(--coral)" : "var(--green)"}
+                <Icon name={isPhone ? "phone" : "mail"} size={19} color={error ? "var(--coral)" : "var(--green)"}
                   style={{ pointerEvents: "none" }} />
-                <input id="mvp-email" type="email" inputMode="email" autoComplete="email" value={email}
-                  onChange={e => { setEmail(e.target.value); if (error) setError(""); }}
-                  placeholder="name@example.com" aria-invalid={!!error} aria-describedby="mvp-email-error"
+                {isPhone && <span className="collage-phone-prefix">+86</span>}
+                <input id="mvp-identity" type={isPhone ? "tel" : "email"} inputMode={isPhone ? "tel" : "email"}
+                  autoComplete={isPhone ? "tel" : "email"} value={identity}
+                  onChange={e => { isPhone ? setPhone(e.target.value) : setEmail(e.target.value); if (error) setError(""); }}
+                  placeholder={isPhone ? "请输入手机号" : "name@example.com"} aria-invalid={!!error} aria-describedby="mvp-login-error"
                   className="collage-email-input" />
                 {valid && <Icon name="check" size={17} color="var(--green)" />}
               </div>
-              <InlineEmailError error={error} />
+              <InlineLoginError error={error} />
               <button type="submit" disabled={busy} className="collage-paper-button" style={{ opacity: busy ? .7 : 1 }}>
                 {busy ? "正在发送…" : "获取验证码"}
                 {!busy && <Icon name="arrowR" size={19} color="#fff" />}
+              </button>
+              <button type="button" className="collage-channel-switch" onClick={switchChannel} disabled={busy}>
+                {isPhone ? "使用邮箱登录" : "使用手机号登录"}
               </button>
               <button type="button" className="collage-guest-skip" onClick={skipLogin} disabled={busy}>
                 跳过登录
@@ -166,11 +189,11 @@ function EmailEntry({ onEnter, onSkip }) {
           </div>
         ) : (
           <div className="soft-fade">
-            <div className="collage-login-title">输入邮箱验证码</div>
-            <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 7, color: "var(--ink-soft)", fontSize: 13 }}>
-              <Icon name="mail" size={15} color="var(--green)" />
-              <span style={{ maxWidth: 245, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</span>
-              <button onClick={editEmail} style={{ color: "var(--green)", fontWeight: 600, flexShrink: 0 }}>换一个</button>
+            <div className="collage-login-title">输入{isPhone ? "短信" : "邮箱"}验证码</div>
+            <div className="collage-login-identity">
+              <Icon name={isPhone ? "phone" : "mail"} size={15} color="var(--green)" />
+              <span>{identity}</span>
+              <button onClick={editIdentity}>换一个</button>
             </div>
 
             <form onSubmit={verifyCode} style={{ marginTop: 24 }}>
@@ -180,19 +203,19 @@ function EmailEntry({ onEnter, onSkip }) {
                     {code[index] || ""}
                   </div>
                 ))}
-                <input ref={codeInput} value={code} inputMode="numeric" autoComplete="one-time-code" aria-label="六位邮箱验证码"
+                <input ref={codeInput} value={code} inputMode="numeric" autoComplete="one-time-code" aria-label={`六位${isPhone ? "短信" : "邮箱"}验证码`}
                   onChange={e => { setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); if (error) setError(""); }}
                   style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "text" }} />
               </div>
-              <InlineEmailError error={error} />
+              <InlineLoginError error={error} />
 
               <button type="submit" disabled={busy || code.length !== 6} className="collage-paper-button" style={{ opacity: busy || code.length !== 6 ? .48 : 1 }}>
                 {busy ? "正在登录…" : "进入我的花园"}
               </button>
             </form>
 
-            <div style={{ marginTop: 14, textAlign: "center", fontSize: 12.5, color: "var(--ink-faint)" }}>
-              {seconds > 0 ? `${seconds} 秒后可以重新发送` : <button onClick={() => sendCode()} disabled={busy} style={{ color: "var(--green)", fontWeight: 600 }}>没有收到？重新发送</button>}
+            <div className="collage-resend-code">
+              {seconds > 0 ? `${seconds} 秒后可以重新发送` : <button onClick={() => sendCode()} disabled={busy}>没有收到？重新发送</button>}
             </div>
           </div>
         )}
@@ -201,8 +224,8 @@ function EmailEntry({ onEnter, onSkip }) {
   );
 }
 
-function InlineEmailError({ error }) {
-  return <div id="mvp-email-error" role="alert" style={{ minHeight: 22, padding: "6px 4px 0", fontSize: 12.5,
+function InlineLoginError({ error }) {
+  return <div id="mvp-login-error" role="alert" style={{ minHeight: 22, padding: "6px 4px 0", fontSize: 12.5,
     color: error ? "var(--coral)" : "transparent" }}>{error || "\u00A0"}</div>;
 }
 

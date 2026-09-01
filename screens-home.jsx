@@ -115,7 +115,7 @@ function WeatherHeader({ weather, titleStyle, flourish, liveWeather, onRefreshWe
   );
 }
 
-function DiaryHome({ go, t = {}, onAccount }) {
+function DiaryHome({ go, t = {}, onAccount, scrollRef }) {
   const plants = window.PLANTS;
   const [filter, setFilter] = useState("all"); // all | care
   const careList = plants.filter(p => p.statusTone === "warn");
@@ -136,7 +136,7 @@ function DiaryHome({ go, t = {}, onAccount }) {
   }
 
   return (
-    <div className="noscroll scroll-with-nav" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 110 }}>
+    <div ref={scrollRef} className="noscroll scroll-with-nav" style={{ position: "absolute", inset: 0, overflowY: "auto", paddingBottom: 110 }}>
       {/* ---- immersive weather masthead ---- */}
       <WeatherHeader weather={weather} titleStyle={titleStyle} flourish={flourish} liveWeather={liveWeather}
         onRefreshWeather={refreshWeather} onAccount={onAccount} />
