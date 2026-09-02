@@ -30,6 +30,7 @@ const runtimeFiles = [
   "screens-chat.jsx",
   "screens-doctor.jsx",
   "screens-profile.jsx",
+  "screens-account.jsx",
   "screens-diary.jsx",
   "screens-garden.jsx",
   "tweaks-panel.jsx",

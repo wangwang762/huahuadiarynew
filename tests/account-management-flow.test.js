@@ -16,6 +16,10 @@ for (const marker of ["window.HHData.migrateGuestGarden(result.account)", "migra
 }
 for (const marker of ["window.location.pathname", "?signedout=", "window.location.replace(cleanEntry)"]) if (!app.includes(marker)) throw new Error(`fresh login reload missing: ${marker}`);
 for (const marker of ["账号管理", "手机号", "备用邮箱", "只有完成绑定后", "退出登录", "确认退出", "退出登录不会删除", 'role="dialog"']) if (!account.includes(marker)) throw new Error(`account screen missing: ${marker}`);
+for (const marker of ["function maskAccountPhone", 'local.slice(0, 3)', 'local.slice(-4)', 'maskedPhone']) if (!account.includes(marker)) throw new Error(`masked phone display missing: ${marker}`);
 if (!html.includes("screens-account.jsx")) throw new Error("account screen is not loaded");
+
+const build = fs.readFileSync("scripts/build-cloudbase.mjs", "utf8");
+if (!build.includes('"screens-account.jsx"')) throw new Error("account screen is missing from the CloudBase build");
 
 console.log("ACCOUNT_MANAGEMENT_FLOW_OK");

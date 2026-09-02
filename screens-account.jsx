@@ -1,12 +1,20 @@
 /* 花花日记本 · 账号管理 */
+function maskAccountPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  const local = digits.startsWith("86") && digits.length === 13 ? digits.slice(2) : digits;
+  if (!/^1\d{10}$/.test(local)) return value || "";
+  return `+86 ${local.slice(0, 3)}****${local.slice(-4)}`;
+}
+
 function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const isGuest = !!(account && account.guest);
   const phone = account && account.phone || "";
+  const maskedPhone = maskAccountPhone(phone);
   const email = account && account.email || "";
-  const primaryIdentity = phone || email || "游客模式";
+  const primaryIdentity = maskedPhone || email || "游客模式";
 
   async function leave() {
     if (busy) return;
@@ -51,7 +59,7 @@ function AccountScreen({ go, account, plantCount = 0, onSignOut }) {
         </div>
         {!isGuest && <div style={{ minHeight: 58, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--hairline)" }}>
           <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>手机号</span>
-          <span style={{ fontSize: 12, color: phone ? "var(--green-deep)" : "var(--ink-faint)" }}>{phone || "未绑定"}</span>
+          <span style={{ fontFamily: "var(--f-num)", fontSize: 12, letterSpacing: ".03em", color: phone ? "var(--green-deep)" : "var(--ink-faint)" }}>{maskedPhone || "未绑定"}</span>
         </div>}
         {!isGuest && <div style={{ minHeight: 58, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--hairline)" }}>
           <span style={{ fontSize: 13.5, color: "var(--ink-soft)" }}>备用邮箱</span>
