@@ -69,7 +69,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
   const [dragging, setDragging] = useState(false);
   const [settling, setSettling] = useState(false);
   const [pullProgress, setPullProgress] = useState(0);
-  const [pocketDepth, setPocketDepth] = useState(0);
+  const [edgeDepth, setEdgeDepth] = useState(0);
   const [guideActive, setGuideActive] = useState(() => shouldShowGardenFloorGuide());
 
   useEffect(() => () => {
@@ -93,11 +93,11 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     setSettling(true);
     setPullProgress(progress);
-    setPocketDepth(depth);
+    setEdgeDepth(depth);
     settleTimerRef.current = window.setTimeout(() => {
       setSettling(false);
       setPullProgress(0);
-      setPocketDepth(0);
+      setEdgeDepth(0);
       settleTimerRef.current = null;
     }, GARDEN_POCKET_SETTLE_MS);
   }
@@ -107,7 +107,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     settleTimerRef.current = null;
     setDragOffset(0);
     setPullProgress(0);
-    setPocketDepth(0);
+    setEdgeDepth(0);
     setSettling(false);
     onFloorChange("garden");
   }
@@ -117,7 +117,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     settleTimerRef.current = null;
     setDragOffset(0);
     setPullProgress(0);
-    setPocketDepth(0);
+    setEdgeDepth(0);
     setSettling(false);
     onFloorChange("diary");
   }
@@ -130,7 +130,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
     settleTimerRef.current = null;
     setSettling(false);
     setPullProgress(0);
-    setPocketDepth(0);
+    setEdgeDepth(0);
     gestureRef.current = { x: touch.clientX, y: touch.clientY, axis: "", offset: 0, rawDistance: 0, progress: 0 };
   }
 
@@ -151,7 +151,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
       gesture.progress = getGardenPullProgress(gesture.rawDistance, height);
       gesture.offset = getGardenPullDistance(gesture.rawDistance, height);
       setPullProgress(gesture.progress);
-      setPocketDepth(gesture.offset);
+      setEdgeDepth(gesture.offset);
     } else {
       if (dy >= 0) return;
       gesture.rawDistance = Math.min(height, -dy);
@@ -172,7 +172,7 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
       finishPocketMotion(openingGarden ? 1 : 0, openingGarden ? gesture.offset : 0);
     } else {
       setPullProgress(0);
-      setPocketDepth(0);
+      setEdgeDepth(0);
     }
     gestureRef.current = null;
     setDragging(false);
@@ -183,21 +183,19 @@ function DiaryGardenFloor({ go, t, onAccount, floor, onFloorChange }) {
   const sheetOffset = dragging
     ? (floor === "garden" ? `calc(100% + ${dragOffset}px)` : `${dragOffset}px`)
     : restingOffset;
-  const pocketVisible = (dragging && dragOffset > 0) || settling;
+  const edgeVisible = (dragging && dragOffset > 0) || settling;
 
   return <div ref={hostRef} className={`diary-garden-floor floor-${floor}`}
-    style={{ "--garden-pull-progress": pullProgress, "--garden-pocket-depth": `${pocketDepth}px` }}
+    style={{ "--garden-pull-progress": pullProgress, "--garden-edge-depth": `${edgeDepth}px` }}
     onTouchStart={startGesture} onTouchMove={moveGesture} onTouchEnd={endGesture} onTouchCancel={endGesture}>
     <div className="garden-floor-scene">
       <GardenScreen go={go} onReturnHome={openDiary} />
     </div>
-    <div className={`garden-pocket-preview${pocketVisible ? " is-visible" : ""}${pullProgress >= 1 ? " is-threshold-ready" : ""}`} aria-hidden="true">
-      <div className="garden-pocket-mask"></div>
-      <div className="garden-pocket-window">
-        <span>{pullProgress >= 1 ? "松手去花园" : "花园在这里"}</span>
-      </div>
+    <div className={`garden-edge-reveal${edgeVisible ? " is-visible" : ""}${pullProgress >= 1 ? " is-threshold-ready" : ""}`} aria-hidden="true">
+      <span>{pullProgress >= 1 ? "松手去花园" : "花园在这里"}</span>
+      <i></i>
     </div>
-    <div className={`diary-floor-sheet${dragging ? " is-dragging" : ""}${guideActive && floor === "diary" ? " is-guide-active" : ""}`}
+    <div className={`diary-floor-sheet${dragging ? " is-dragging" : ""}${edgeVisible && floor === "diary" ? " has-garden-edge" : ""}${guideActive && floor === "diary" ? " is-guide-active" : ""}`}
       style={{ transform: `translate3d(0, ${sheetOffset}, 0)` }}>
       <DiaryHome go={go} t={t} onAccount={onAccount} scrollRef={scrollRef} />
       {guideActive && floor === "diary" && <div className="garden-floor-guide" aria-hidden="true">

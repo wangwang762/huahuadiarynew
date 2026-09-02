@@ -8,10 +8,11 @@ for (const marker of [
   "function getGardenPullDistance",
   "function getGardenPullProgress",
   '"--garden-pull-progress"',
-  "garden-pocket-preview",
+  '"--garden-edge-depth"',
+  "garden-edge-reveal",
   "is-threshold-ready",
 ]) {
-  if (!app.includes(marker)) throw new Error(`missing garden pocket marker: ${marker}`);
+  if (!app.includes(marker)) throw new Error(`missing garden edge marker: ${marker}`);
 }
 
 if (!/Math\.pow\(|Math\.sqrt\(|Math\.log1p\(/.test(app)) {
@@ -19,13 +20,17 @@ if (!/Math\.pow\(|Math\.sqrt\(|Math\.log1p\(/.test(app)) {
 }
 
 for (const marker of [
-  ".garden-pocket-preview",
-  ".garden-pocket-window",
-  "-webkit-mask-image:",
+  ".garden-edge-reveal",
+  ".diary-floor-sheet::before",
+  "--garden-edge-depth",
   "var(--garden-pull-progress)",
   "pointer-events:none",
 ]) {
-  if (!styles.includes(marker)) throw new Error(`missing pocket style marker: ${marker}`);
+  if (!styles.includes(marker)) throw new Error(`missing continuous edge style marker: ${marker}`);
+}
+
+if (styles.includes(".garden-pocket-mask")) {
+  throw new Error("legacy radial pocket mask must be removed");
 }
 
 console.log("GARDEN_POCKET_MOTION_OK");
