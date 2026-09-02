@@ -294,10 +294,10 @@ function App({ t = {} }) {
     setStack(s => [...s, { view: dest, plant: plant || top.plant, ...(opts || {}) }]);
   }
   async function archiveNewPlant(newPlant) {
-    await window.HHData.createPlantWithFirstEntry(newPlant);
-    window.PLANTS.unshift(newPlant);
+    const savedPlant = await window.HHData.createPlantWithFirstEntry(newPlant);
+    window.PLANTS.unshift(savedPlant);
     setPlants([...window.PLANTS]);
-    setStack([{ view: "plantDiary", plant: newPlant }]);
+    setStack([{ view: "plantDiary", plant: savedPlant }]);
   }
   async function savePlant(plant) {
     await window.HHData.updatePlant(plant);

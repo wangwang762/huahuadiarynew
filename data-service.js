@@ -9,6 +9,7 @@
     diaryEntries: "diary_entries",
   };
   const GUEST_STORAGE_KEY = "huahua.guestGarden.v1";
+  const CLOUD_FALLBACK_STORAGE_PREFIX = "huahua.cloudFallbackGarden.v1:";
   let activeAccount = null;
 
   function clone(value) {
@@ -63,6 +64,58 @@
     };
     window.localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(safeGarden));
     return clone(safeGarden);
+  }
+
+  function cloudFallbackStorageKey(account = activeAccount) {
+    const ownerId = account && account.id;
+    return ownerId ? `${CLOUD_FALLBACK_STORAGE_PREFIX}${ownerId}` : "";
+  }
+
+  function readCloudFallbackPlants(account = activeAccount) {
+    const key = cloudFallbackStorageKey(account);
+    if (!key) return [];
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(key) || "[]");
+      return Array.isArray(saved) ? clone(saved) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeCloudFallbackPlant(plant, account = activeAccount) {
+    const key = cloudFallbackStorageKey(account);
+    if (!key) throw new Error("请先登录，再保存这株植物");
+    const plants = readCloudFallbackPlants(account);
+    const savedPlant = {
+      ...clone(plant),
+      syncPending: true,
+      syncState: "local-only",
+    };
+    const existingIndex = plants.findIndex(item => item.id === savedPlant.id);
+    if (existingIndex >= 0) plants.splice(existingIndex, 1, savedPlant);
+    else plants.unshift(savedPlant);
+    try {
+      window.localStorage.setItem(key, JSON.stringify(plants));
+    } catch (_) {
+      throw new Error("手机本地空间不足，暂时没有保存成功，请清理空间后再试");
+    }
+    return clone(savedPlant);
+  }
+
+  function cloudFallbackPlant(plantId, account = activeAccount) {
+    return readCloudFallbackPlants(account).find(item => item.id === plantId) || null;
+  }
+
+  function removeCloudFallbackPlant(plantId, account = activeAccount) {
+    const key = cloudFallbackStorageKey(account);
+    if (!key) return;
+    const plants = readCloudFallbackPlants(account).filter(item => item.id !== plantId);
+    window.localStorage.setItem(key, JSON.stringify(plants));
+  }
+
+  function isQuotaExceeded(error) {
+    return /quota\s+has\s+been\s+exceeded|quota.*exceed|配额.*(?:不足|超限|用完)/i
+      .test(String(error && error.message || error || ""));
   }
 
   function guestGardenSnapshot() {
@@ -149,13 +202,16 @@
       const diaryRows = rowsFrom(diaryResult);
       const byNewest = (a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""));
       const entries = diaryRows.sort(byNewest);
-      const plants = plantRows.sort(byNewest).map(row => {
+      const cloudPlants = plantRows.sort(byNewest).map(row => {
         const plant = plantFromRow(row);
         plant.diary = entries
           .filter(entry => entry.plant_id === plant.id)
           .map(entryFromRow);
         return plant;
       });
+      const fallbackPlants = readCloudFallbackPlants(account);
+      const fallbackIds = new Set(fallbackPlants.map(plant => plant.id));
+      const plants = [...fallbackPlants, ...cloudPlants.filter(plant => !fallbackIds.has(plant.id))];
       window.PLANTS = plants;
       window.CACTUS = plants[0] || null;
       return {
@@ -237,33 +293,38 @@
       return clone(savedPlant);
     }
     if (window.HHCloud.demo) return clone(plant);
-    const uid = currentOwnerId();
-    const { db } = window.HHCloud.get();
-    const now = new Date().toISOString();
-    const entries = plant.diary || [];
-    const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
-    const plantRow = clean({ id: plant.id, owner_id: uid, data: plantFields, created_at: now, updated_at: now });
-    throwWriteError(await db.from(TABLES.plants).upsert(plantRow, { onConflict: "id" }));
     try {
-      for (const entry of entries) {
-        const { id: entryId, createdAt: _createdAt, updatedAt: _updatedAt, ...entryFields } = entry;
-        const entryRow = clean({
-          id: entryId,
-          owner_id: uid,
-          plant_id: plant.id,
-          data: entryFields,
-          created_at: now,
-          updated_at: now,
-        });
-        throwWriteError(await db.from(TABLES.diaryEntries).upsert(entryRow, { onConflict: "id" }));
+      const uid = currentOwnerId();
+      const { db } = window.HHCloud.get();
+      const now = new Date().toISOString();
+      const entries = plant.diary || [];
+      const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
+      const plantRow = clean({ id: plant.id, owner_id: uid, data: plantFields, created_at: now, updated_at: now });
+      throwWriteError(await db.from(TABLES.plants).upsert(plantRow, { onConflict: "id" }));
+      try {
+        for (const entry of entries) {
+          const { id: entryId, createdAt: _createdAt, updatedAt: _updatedAt, ...entryFields } = entry;
+          const entryRow = clean({
+            id: entryId,
+            owner_id: uid,
+            plant_id: plant.id,
+            data: entryFields,
+            created_at: now,
+            updated_at: now,
+          });
+          throwWriteError(await db.from(TABLES.diaryEntries).upsert(entryRow, { onConflict: "id" }));
+        }
+        await setOnboarded(activeAccount);
+        return clone(plant);
+      } catch (error) {
+        for (const entry of entries) {
+          try { await db.from(TABLES.diaryEntries).delete().eq("id", entry.id); } catch (_) {}
+        }
+        try { await db.from(TABLES.plants).delete().eq("id", plant.id); } catch (_) {}
+        throw error;
       }
-      await setOnboarded(activeAccount);
-      return clone(plant);
     } catch (error) {
-      for (const entry of entries) {
-        try { await db.from(TABLES.diaryEntries).delete().eq("id", entry.id); } catch (_) {}
-      }
-      try { await db.from(TABLES.plants).delete().eq("id", plant.id); } catch (_) {}
+      if (isQuotaExceeded(error)) return writeCloudFallbackPlant(plant);
       throw error;
     }
   }
@@ -277,6 +338,7 @@
       writeGuestGarden(garden);
       return clone(plant);
     }
+    if (plant.syncPending || cloudFallbackPlant(plant.id)) return writeCloudFallbackPlant(plant);
     if (window.HHCloud.demo) return clone(plant);
     currentOwnerId();
     const { diary, id, createdAt, updatedAt, ...plantFields } = plant;
@@ -295,6 +357,10 @@
       writeGuestGarden(garden);
       return true;
     }
+    if (cloudFallbackPlant(plantId)) {
+      removeCloudFallbackPlant(plantId);
+      return true;
+    }
     if (window.HHCloud.demo) return true;
     const uid = currentOwnerId();
     const { db } = window.HHCloud.get();
@@ -311,6 +377,13 @@
       plant.diary = Array.isArray(plant.diary) ? plant.diary : [];
       plant.diary.unshift(clone(entry));
       writeGuestGarden(garden);
+      return clone(entry);
+    }
+    const fallbackPlant = cloudFallbackPlant(plantId);
+    if (fallbackPlant) {
+      fallbackPlant.diary = Array.isArray(fallbackPlant.diary) ? fallbackPlant.diary : [];
+      fallbackPlant.diary.unshift(clone(entry));
+      writeCloudFallbackPlant(fallbackPlant);
       return clone(entry);
     }
     if (window.HHCloud.demo) return clone(entry);
@@ -341,6 +414,14 @@
       writeGuestGarden(garden);
       return clone(entry);
     }
+    const fallbackPlant = cloudFallbackPlant(plantId);
+    if (fallbackPlant) {
+      const index = (fallbackPlant.diary || []).findIndex(item => item.id === entry.id);
+      if (index < 0) throw new Error("这篇观察记录还没有保存在本机");
+      fallbackPlant.diary.splice(index, 1, clone(entry));
+      writeCloudFallbackPlant(fallbackPlant);
+      return clone(entry);
+    }
     if (window.HHCloud.demo) return clone(entry);
     currentOwnerId();
     const { id, createdAt, updatedAt, ...entryFields } = entry;
@@ -354,6 +435,7 @@
   window.HHData = {
     TABLES,
     GUEST_STORAGE_KEY,
+    CLOUD_FALLBACK_STORAGE_PREFIX,
     bootstrap,
     guestGardenSnapshot,
     migrateGuestGarden,

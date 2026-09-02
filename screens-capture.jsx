@@ -2,6 +2,25 @@
    花花日记本 · 拍照记录 → AI 分诊
    主人主动拍照 → AI 判断：状态好（情绪文案记录）/ 需诊断（指路花大夫）
    ============================================================ */
+async function resizeDataImage(source, maxEdge = 720, quality = 0.72) {
+  if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(String(source || ""))) return "";
+  try {
+    const bitmap = await createImageBitmap(await (await fetch(source)).blob());
+    const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+    canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#F7F3E8";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", quality);
+  } catch (_) {
+    return String(source || "");
+  }
+}
+
 function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = false, onSaveEntry, onUpdateEntry }) {
   const p = plant;
   const hasInitialImage = /^data:image\/(?:jpeg|png|webp|heic|heif);base64,/i.test(String(initialImage || ""));
@@ -232,25 +251,6 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = 
       return canvas.toDataURL("image/jpeg", quality);
     } catch (_) {
       return source.startsWith("data:image/") || source.startsWith("https://") ? source : "";
-    }
-  }
-
-  async function resizeDataImage(source, maxEdge = 720, quality = 0.72) {
-    if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(String(source || ""))) return "";
-    try {
-      const bitmap = await createImageBitmap(await (await fetch(source)).blob());
-      const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
-      canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
-      const context = canvas.getContext("2d");
-      context.fillStyle = "#F7F3E8";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      bitmap.close();
-      return canvas.toDataURL("image/jpeg", quality);
-    } catch (_) {
-      return String(source || "");
     }
   }
 
@@ -503,11 +503,16 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
     || (draft && draft._sp) || window.SPECIES[0];
   const [sp, setSp] = useState(sp0);
   const [speciesText, setSpeciesText] = useState(prefillSpecies);
+  const speciesEditedRef = useRef(false);
   const [name, setName] = useState("");
   const [traits, setTraits] = useState(sp0.traits.slice(0, 3));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const photoId = (draft && draft.photoId) || "intake-new";
+
+  useEffect(() => {
+    if (prefillSpecies && !speciesEditedRef.current) setSpeciesText(prefillSpecies);
+  }, [prefillSpecies]);
 
   function pickSp(s) { setSp(s); setSpeciesText(s.species); setTraits(s.traits.slice(0, 3)); }
   const GENERIC_TRAITS = ["温柔", "安静", "元气", "高冷", "傲娇", "黏人", "乐天", "敏感", "坚强", "治愈", "话痨", "怕生"];
@@ -522,6 +527,9 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
     setSaveError("");
     const nm = name.trim() || "新朋友";
     const finalSpecies = speciesText.trim() || (draft && draft.recognitionFailed ? "待识别" : sp.species);
+    const archivePhoto = draft && draft.diagnosisPhoto
+      ? await resizeDataImage(draft.diagnosisPhoto, 720, 0.7).catch(() => draft.diagnosisPhoto)
+      : "";
     const guide = window.CARE_GUIDE[sp.shape] || window.CARE_GUIDE.succulent;
     const newP = {
       id: "u" + Date.now(), name: nm, species: finalSpecies, shape: sp.shape,
@@ -544,8 +552,8 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
       urgency: diagnosis.urgency,
       confidence: diagnosis.confidence,
       voice: "花大夫看过啦，我会照做的。", photo: photoId,
-      photoData: draft && draft.diagnosisPhoto,
-      photos: draft && draft.diagnosisPhoto ? [draft.diagnosisPhoto] : [],
+      photoData: archivePhoto,
+      photos: archivePhoto ? [archivePhoto] : [],
     });
     const born = {
       id: newP.id + "-d0", day: "今天", date: new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date()),
@@ -557,7 +565,10 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
     try {
       await onArchive(newP);
     } catch (error) {
-      setSaveError(error && error.message ? error.message : "没有建档成功，请再试一次");
+      const rawMessage = error && error.message ? error.message : "";
+      setSaveError(/quota\s+has\s+been\s+exceeded|quota.*exceed/i.test(rawMessage)
+        ? "云端空间暂时忙，请稍后再试；当前填写的内容还保留在本页。"
+        : rawMessage || "没有建档成功，请再试一次");
       setSaving(false);
     }
   }
@@ -602,7 +613,7 @@ function ArchiveNew({ draft, dx, onArchive, onBack }) {
             它是什么品种？（识别仅供参考，可直接填写）
             {prefillSpecies && !draft.recognitionFailed && <span style={{ color: "var(--green-deep)" }}> · 识别结果已带入，可修改</span>}
           </div>
-          <input value={speciesText} onChange={e => setSpeciesText(e.target.value)} maxLength={12} placeholder="输入品种，如「虎皮兰」"
+          <input value={speciesText} onChange={e => { speciesEditedRef.current = true; setSpeciesText(e.target.value); }} maxLength={24} placeholder="输入品种，如「虎皮兰」"
             style={{ width: "100%", height: 46, borderRadius: 12, border: `1.5px solid ${sp.accent}40`,
               background: "var(--glass-strong)", padding: "0 15px", fontSize: 15.5, fontFamily: "var(--f-journal)",
               color: "var(--ink)", outline: "none" }} />

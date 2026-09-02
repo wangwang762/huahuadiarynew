@@ -12,6 +12,7 @@ for (const marker of [
   "startNewFriendDiagnosis",
   "recognitionError",
   "prefillSpecies",
+  "speciesEditedRef",
   "识别结果已带入，可修改",
   "暂不建档",
 ]) {
