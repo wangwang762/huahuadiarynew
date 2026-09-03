@@ -7,7 +7,7 @@ const html = fs.readFileSync("花花日记本.html", "utf8");
 
 for (const marker of ["onAccount={onAccount}", 'aria-label="账号管理"']) if (!home.includes(marker)) throw new Error(`account entry missing: ${marker}`);
 if (home.indexOf("shownWeather") > home.indexOf('aria-label="账号管理"')) throw new Error("weather should sit beside the city, before account management");
-for (const marker of ["window.HHAccount.signOut()", 'setStack([{ view: "email", playIntro: false }])', "<AccountScreen"]) if (!app.includes(marker)) throw new Error(`account route missing: ${marker}`);
+for (const marker of ["window.HHAccount.signOut()", 'setStack([{ view: "email", playIntro: false }])', "window.AccountScreen", "<AccountLoadFallback"]) if (!app.includes(marker)) throw new Error(`account route missing: ${marker}`);
 for (const marker of ["function openAccount()", "account && !account.guest", 'setStack([{ view: "email", playIntro: false }])']) if (!app.includes(marker)) throw new Error(`guest account routing missing: ${marker}`);
 if (app.includes("window.location.replace(loginEntry)")) throw new Error("guest login must open in-app instead of hard reloading on iOS");
 for (const marker of ["window.HHData.migrateGuestGarden(result.account)", "migratedCount"]) {
@@ -21,5 +21,8 @@ if (!html.includes("screens-account.jsx")) throw new Error("account screen is no
 
 const build = fs.readFileSync("scripts/build-cloudbase.mjs", "utf8");
 if (!build.includes('"screens-account.jsx"')) throw new Error("account screen is missing from the CloudBase build");
+
+const builtAccount = fs.readFileSync("dist/cloudbase/screens-account.js", "utf8");
+for (const marker of ["AccountScreen", "window.AccountScreen"]) if (!builtAccount.includes(marker)) throw new Error(`built account screen missing: ${marker}`);
 
 console.log("ACCOUNT_MANAGEMENT_FLOW_OK");

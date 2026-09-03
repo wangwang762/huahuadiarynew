@@ -415,7 +415,21 @@ function App({ t = {} }) {
       {top.view === "archiveNew" && <ArchiveNew draft={top.plant} dx={top.dx} onArchive={archiveNewPlant} onBack={() => go("back")} />}
       {top.view === "profile" && <ProfileScreen go={go} plant={top.plant} onSave={savePlant} />}
       {top.view === "deletePlant" && <PlantDeleteConfirm plant={top.plant} onCancel={() => go("back")} onDelete={deletePlant} />}
-      {top.view === "account" && <AccountScreen go={go} account={account} plantCount={window.PLANTS.length} onSignOut={signOut} />}
+      {top.view === "account" && (typeof window.AccountScreen === "function"
+        ? React.createElement(window.AccountScreen, { go, account, plantCount: window.PLANTS.length, onSignOut: signOut })
+        : <AccountLoadFallback go={go} />)}
+    </div>
+  );
+}
+
+function AccountLoadFallback({ go }) {
+  return (
+    <div className="noscroll" role="alert" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", padding: "0 38px", textAlign: "center", background: "var(--paper)" }}>
+      <Icon name="user" size={34} color="var(--green-deep)" />
+      <div style={{ marginTop: 18, fontFamily: "var(--f-journal)", fontSize: 22, fontWeight: 650, color: "var(--ink)" }}>个人中心暂时没有载入</div>
+      <div className="serif" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.65, color: "var(--ink-soft)" }}>返回日记本后刷新一次，就可以继续查看账号。</div>
+      <button onClick={() => go("back")} className="btn-green" style={{ marginTop: 22, width: 180, height: 48, fontSize: 15 }}>返回日记本</button>
     </div>
   );
 }
