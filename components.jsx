@@ -59,6 +59,12 @@ function Icon({ name, size = 24, color = "currentColor", stroke = 1.8, fill = fa
     arrowR: <><path d="M4 12h15" {...p}/><path d="M13 6l6 6-6 6" {...p}/></>,
     send: <><path d="M4.5 12 20 4.5 14 20l-3.5-6.5L4.5 12Z" {...p}/></>,
     camera: <><rect x="3.4" y="7.2" width="17.2" height="12" rx="2.8" {...p}/><path d="M8.8 7.2 10 5.3h4l1.2 1.9" {...p}/><circle cx="12" cy="13.3" r="3" {...p}/><circle cx="17" cy="10.2" r="0.7" fill={color} stroke="none"/></>,
+    polaroidScan: <>
+      <rect x="4.4" y="3.2" width="14.4" height="17.2" rx="1.6" transform="rotate(-6 12 12)" {...p}/>
+      <rect x="6.1" y="5.1" width="11" height="9.6" rx="0.8" transform="rotate(-6 12 12)" fill={color} opacity=".16" stroke="none"/>
+      <path d="M7.9 18.5h6.6" transform="rotate(-6 12 12)" {...p}/>
+      <path d="M15.5 6.3c1.9-1.6 4-1.6 4.6-.2.6 1.5-1.1 3.2-3.5 3.6" {...p}/>
+    </>,
     drop: <><path d="M12 3.4c3.3 3.9 5.2 6.7 5.2 9.4a5.2 5.2 0 1 1-10.4 0c0-2.7 1.9-5.5 5.2-9.4Z" {...p}/><path d="M9.2 13.8a2.8 2.8 0 0 0 2 2.4" {...p}/></>,
     sun: <><circle cx="12" cy="12" r="4" {...p}/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" {...p}/></>,
     leaf: <><path d="M5 19.4 7.3 17" {...p}/><path d="M7.3 17C6.2 10.5 11.2 5.8 18.6 6c.4 7.2-4.6 12.3-11.3 11Z" {...p}/><path d="M9.3 14.7c2-1.9 4.3-3.2 6.9-3.9" {...p}/></>,

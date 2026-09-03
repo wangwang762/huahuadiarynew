@@ -54,8 +54,9 @@ function GlobalCaptureButton({ go }) {
   return <>
     <input ref={inputRef} className="global-capture-input" type="file" accept="image/*" capture="environment"
       onChange={openCapture} aria-label="拍照或从相册选择植物照片" />
-    <button className="global-capture-button" onClick={choosePhoto} aria-label="拍照记今天">
-      <Icon name="camera" size={24} color="#fff" />
+    <button className="global-capture-button" onClick={choosePhoto} aria-label="拍照问诊，认一认这是哪盆花">
+      <Icon name="polaroidScan" size={22} color="#fff" />
+      <span>拍照问诊</span>
     </button>
   </>;
 }
