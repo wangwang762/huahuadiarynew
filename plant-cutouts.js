@@ -22,3 +22,9 @@ window.PLANT_CUT.hudielan = "assets/plants/generated/hudielan.png";
 Object.assign(window.PLANT_CUT, Object.fromEntries([
   "lvluo", "guibeizhu", "diaolan", "facaishu", "fuguizhu", "xianrenzhang", "duorou", "hupilan", "luhui", "jinqianshu", "hudielan", "changshouhua", "yueji", "zhizihua", "molihua", "wenzhu", "baizhang", "hongzhang", "junzilan", "xiangrikui", "bohe", "xianrenqiu", "lanmeishu", "xiuqiuhua", "zhubai",
 ].map(key => [key, `assets/plants/final-v1/${key}.png`])));
+
+// Expansion avatars already include their deliberately paired flowerpot.
+// Use each plate as one indivisible avatar so the pairing stays consistent.
+(window.PLANT_CATALOG_EXPANSION || []).forEach(item => {
+  window.PLANT_CUT[item.id] = item.asset;
+});

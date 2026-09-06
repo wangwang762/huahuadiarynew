@@ -253,6 +253,22 @@ function App({ t = {} }) {
     try {
       const restored = await window.HHAccount.restoreSession();
       if (!restored) {
+        let isGuest = false;
+        try {
+          const raw = window.localStorage.getItem("huahua.guestGarden.v1");
+          if (raw) {
+            const saved = JSON.parse(raw);
+            if (saved && saved.profile && saved.profile.guest) {
+              isGuest = true;
+            }
+          }
+        } catch (e) {}
+
+        if (isGuest) {
+          setBoot({ status: "ready", error: "" });
+          return enterGuestGarden();
+        }
+
         window.PLANTS = [];
         setPlants([]);
         setAccount(null);

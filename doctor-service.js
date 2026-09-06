@@ -116,6 +116,7 @@
       ? [...new Set(raw.matchedIds.map(String).filter(id => validIds.has(id)))]
       : [];
     return {
+      isPlant: raw.isPlant !== false && raw.is_plant !== false,
       species,
       confidence,
       matchedIds: confident ? (speciesMatchedIds.length ? speciesMatchedIds : fallbackMatchedIds) : [],

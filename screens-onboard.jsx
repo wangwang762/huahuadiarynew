@@ -1,6 +1,6 @@
 /* ============================================================
    花花日记本 · 新手引导 — 从空无一物，到第一篇日记
-   welcome(空) → 手动选择品类 → 起名+性格 → 注入灵魂(动效) → 第一篇日记
+   welcome(空) → 拍照识别/手动选择 → 起名+性格 → 注入灵魂(动效) → 第一篇日记
    ============================================================ */
 function Onboard({ onComplete, onSkip, startAtSpecies = false }) {
   const [step, setStep] = useState(startAtSpecies ? 2 : 0);
@@ -146,24 +146,137 @@ function ObWelcome({ sp, onNext, onSkip }) {
 
 /* ---------- 2 · choose a species from the authored avatar library ---------- */
 function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
+  const photoInputRef = useRef(null);
+  const [recognizing, setRecognizing] = useState(false);
+  const [recognitionPhoto, setRecognitionPhoto] = useState("");
+  const [recognizedSp, setRecognizedSp] = useState(null);
+  const [recognitionNote, setRecognitionNote] = useState("");
+  const [recognitionError, setRecognitionError] = useState("");
+  const [showManual, setShowManual] = useState(false);
+
+  function chooseRecognitionPhoto() {
+    if (!recognizing && photoInputRef.current) photoInputRef.current.click();
+  }
+
+  function chooseManualSpecies(item) {
+    setRecognizedSp(null);
+    setRecognitionNote("");
+    setShowManual(true);
+    pickSpecies(item);
+  }
+
+  function readRecognitionPhoto(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    if (!String(file.type || "").startsWith("image/")) {
+      setRecognitionError("请选择一张植物照片");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const source = typeof reader.result === "string" ? reader.result : "";
+      if (!source.startsWith("data:image/")) {
+        setRecognitionError("照片没有读取成功，请重新拍一张");
+        return;
+      }
+      setRecognitionPhoto(source);
+      setRecognizedSp(null);
+      setRecognitionError("");
+      setRecognizing(true);
+      try {
+        const image = typeof resizeDataImage === "function"
+          ? await resizeDataImage(source, 1280, .78)
+          : source;
+        const candidates = window.SPECIES.map(item => ({
+          id: item.id,
+          name: (item.aliases || []).join("/"),
+          species: item.species,
+        }));
+        const result = await window.HHDoctor.recognize({ image, plants: candidates });
+        if (result && result.isPlant === false) {
+          setRecognitionError("这张照片里没有清楚看到植物，换个角度再拍一张吧");
+          setShowManual(true);
+          return;
+        }
+        const matchedId = result && Array.isArray(result.matchedIds) ? result.matchedIds[0] : "";
+        const match = window.SPECIES.find(item => item.id === matchedId)
+          || (window.matchPlantSpecies && window.matchPlantSpecies(result && result.species));
+        if (!match || Number(result && result.confidence) < .42) {
+          setRecognitionError("这次还没认准。可以重新拍，或在下面手动选一个最像的。");
+          setShowManual(true);
+          return;
+        }
+        pickSpecies(match);
+        setRecognizedSp(match);
+        setRecognitionNote(String(result.note || "已按叶形和整体株型匹配头像"));
+      } catch (error) {
+        setRecognitionError((error && error.message) || "识别暂时没成功，可以重新拍或手动选择");
+        setShowManual(true);
+      } finally {
+        setRecognizing(false);
+      }
+    };
+    reader.onerror = () => setRecognitionError("照片没有读取成功，请重新拍一张");
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: "92px 20px 0" }}>
       <div style={{ textAlign: "center", flexShrink: 0 }}>
-        <div className="kicker" style={{ color: "var(--green-deep)" }}>选择植物品类</div>
+        <div className="kicker" style={{ color: "var(--green-deep)" }}>认识新朋友</div>
         <div style={{ fontFamily: "var(--f-journal)", fontSize: 25, fontWeight: 600, color: "var(--ink)", marginTop: 7 }}>
-          哪一盆最像它？
+          拍一张，就知道它是谁
         </div>
         <div className="serif" style={{ fontSize: 13.5, color: "var(--ink-soft)", marginTop: 7 }}>
-          先选品类，之后随时可以修改
+          识别后会匹配一枚精心搭配好的植物头像
         </div>
       </div>
 
-      <div className="noscroll" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        gap: 8, padding: "18px 0 112px", alignContent: "start" }}>
+      <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={readRecognitionPhoto}
+        tabIndex={-1} aria-hidden="true" style={{ display: "none" }} />
+      {!recognizedSp ? (
+        <button onClick={chooseRecognitionPhoto} disabled={recognizing} className="btn-green"
+          style={{ margin: "17px auto 0", width: "100%", maxWidth: 310, minHeight: 50, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 15.5,
+            opacity: recognizing ? .72 : 1 }}>
+          <Icon name="camera" size={19} color="#fff" /> {recognizing ? "正在认一认它……" : "拍照识别植物"}
+        </button>
+      ) : (
+        <div style={{ marginTop: 15, padding: "11px 12px", borderRadius: 17, flexShrink: 0,
+          display: "grid", gridTemplateColumns: "52px 1fr 58px", gap: 10, alignItems: "center",
+          background: "rgba(255,253,247,.86)", border: "1px solid var(--green-soft)", boxShadow: "var(--sh-1)" }}>
+          <img src={recognitionPhoto} alt="刚拍摄的植物" style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover" }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: "var(--f-journal)", fontSize: 15, fontWeight: 700, color: "var(--green-deep)" }}>
+              认出是 {recognizedSp.species}
+            </div>
+            <div className="serif" style={{ marginTop: 3, fontSize: 11.5, lineHeight: 1.35, color: "var(--ink-faint)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{recognitionNote}</div>
+          </div>
+          <div style={{ width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <img src={window.cutFor(recognizedSp.photoId)} alt={`${recognizedSp.species}默认头像`}
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "50% 100%" }} />
+          </div>
+        </div>
+      )}
+      {recognitionError && <div role="alert" style={{ margin: "9px auto 0", maxWidth: 310, flexShrink: 0,
+        color: "var(--coral)", fontSize: 12.5, lineHeight: 1.45, textAlign: "center" }}>{recognitionError}</div>}
+
+      <button onClick={() => setShowManual(value => !value)}
+        style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, color: "var(--ink-faint)", flexShrink: 0 }}>
+        <span style={{ height: 1, background: "var(--hairline)", flex: 1 }} />
+        <span className="serif" style={{ fontSize: 12 }}>{showManual ? "收起品类库" : (recognizedSp ? "不是它？手动找" : "也可以手动选择")}</span>
+        <span style={{ height: 1, background: "var(--hairline)", flex: 1 }} />
+      </button>
+
+      {showManual ? <div className="noscroll" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gap: 8, padding: "12px 0 112px", alignContent: "start" }}>
         {window.SPECIES.map(s => {
           const on = Boolean(sp && s.id === sp.id);
           return (
-            <button key={s.id} data-picker-card="cover" aria-label={`选择${s.species}`} aria-pressed={on} onClick={() => pickSpecies(s)}
+            <button key={s.id} data-picker-card="cover" aria-label={`选择${s.species}`} aria-pressed={on} onClick={() => chooseManualSpecies(s)}
               style={{ minHeight: 122, padding: 6, borderRadius: 15, position: "relative",
                 display: "flex", flexDirection: "column", alignItems: "stretch", gap: 6,
                 background: on ? `linear-gradient(180deg, #fff, ${s.soft}88)` : "rgba(255,255,255,0.5)",
@@ -189,12 +302,19 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
             </button>
           );
         })}
-      </div>
+      </div> : <div style={{ flex: 1, padding: "30px 20px 112px", display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div className="serif" style={{ width: "100%", maxWidth: 290, padding: "17px 18px", borderRadius: 16,
+          color: "var(--ink-soft)", fontSize: 12.5, lineHeight: 1.75, background: "rgba(255,255,255,.34)",
+          border: "1px dashed var(--hairline)" }}>
+          <div style={{ color: "var(--green-deep)", fontFamily: "var(--f-journal)", fontWeight: 700, marginBottom: 5 }}>拍得清楚一点，会认得更准</div>
+          <div>① 一次只拍一盆　② 叶片和整体株形都入镜　③ 尽量使用自然光</div>
+        </div>
+      </div>}
 
       <div className="bottom-action-bar" style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "18px 30px 0",
         background: "linear-gradient(180deg, rgba(247,242,232,0), var(--paper) 30%)" }}>
         <button onClick={onNext} disabled={!sp} className="btn-green" style={{ width: "100%", height: 54, fontSize: 16 }}>
-          选好了，下一步
+          {recognizedSp ? "就是它，下一步" : "选好了，下一步"}
         </button>
       </div>
     </div>

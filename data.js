@@ -356,6 +356,8 @@ window.cutKey = function (pid) {
   for (const [needles, key] of legacy) if (needles.some(n => s.includes(n))) return key;
   const keys = ["fuguizhu", "luhui", "jinqianshu", "changshouhua", "yueji", "zhizihua", "molihua", "wenzhu", "baizhang", "hongzhang", "junzilan", "bohe", "xianrenqiu", "lanmeishu", "xiuqiuhua", "zhubai"];
   for (const key of keys) if (s.includes(key)) return key;
+  const expandedKeys = Object.keys(window.PLANT_IMG || {}).sort((a, b) => b.length - a.length);
+  for (const key of expandedKeys) if (s.includes(key)) return key;
   return "ciji";
 };
 

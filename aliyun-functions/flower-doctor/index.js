@@ -75,7 +75,7 @@ function safeMessages(input) {
 
 function safeCandidates(input) {
   if (!Array.isArray(input)) return [];
-  return input.slice(0, 60).map(item => ({
+  return input.slice(0, 80).map(item => ({
     id: String((item && item.id) || "").slice(0, 80),
     name: String((item && item.name) || "").slice(0, 50),
     species: String((item && item.species) || "").slice(0, 80),
@@ -85,6 +85,7 @@ function safeCandidates(input) {
 function normalizeRecognition(value, candidates) {
   const validIds = new Set(candidates.map(item => item.id));
   return {
+    isPlant: value.is_plant !== false && value.isPlant !== false,
     species: String(value.species || "待识别").slice(0, 80),
     confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0)),
     matchedIds: Array.isArray(value.matched_ids)
@@ -268,7 +269,7 @@ async function execute(payload) {
     const candidateText = candidates.length
       ? candidates.map(item => `${item.id} | ${item.name} | ${item.species}`).join("\n")
       : "（花园暂无植物）";
-    const prompt = `植物识别路由。根据照片识别最可能的家庭植物品类，并与候选档案按品类匹配。候选：\n${candidateText}\n只输出JSON：{"species":"品类","confidence":0.0,"matched_ids":["候选ID"],"note":"可见依据"}。matched_ids只能来自候选；不确定时降低confidence并返回空数组。`;
+    const prompt = `植物识别路由。第一步判断照片主体是不是一盆真实植物；电脑、人物、家具、空花盆或纯风景都不是植物，不得猜测。若是植物，再根据叶形、株型、花朵等可见特征，从候选目录中选择最接近的一项；匹配时species必须原样返回候选中的标准品类名。候选：\n${candidateText}\n只输出JSON：{"is_plant":true,"species":"候选中的标准品类名","confidence":0.0,"matched_ids":["候选ID"],"note":"简短可见依据"}。matched_ids只能来自候选；非植物必须返回is_plant=false、species=待识别、confidence=0、matched_ids=[]；看不清或不确定时降低confidence并返回空数组，不要硬猜。`;
     const raw = await generate([
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: image } }] },

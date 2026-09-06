@@ -76,6 +76,7 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = 
         const byId = new Map(window.PLANTS.map(item => [String(item.id), item]));
         const matches = ids.map(id => byId.get(String(id))).filter(Boolean);
         const recognition = {
+          isPlant: result && result.isPlant !== false,
           species: String(result && result.species || "待识别"),
           confidence: Number(result && result.confidence) || 0,
           note: String(result && result.note || ""),
@@ -83,6 +84,11 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = 
         };
         setRecognition(recognition);
         setMatchedPlants(matches);
+        if (!recognition.isPlant) {
+          setPhotoError("这张照片里没有清楚看到植物，请重新拍摄植物的叶片和花盆");
+          setStep("shoot");
+          return;
+        }
         if (matches.length === 1) {
           const matched = matches[0];
           matched.diagnosisPhoto = image;
@@ -217,7 +223,8 @@ function CaptureFlow({ go, plant, intake = false, initialImage = "", autoSave = 
   }
   function startNewFriendDiagnosis(species, image, fromRecognitionFailure = false, errorMessage = "") {
     const cleanSpecies = String(species || "待识别").trim();
-    const sp = window.SPECIES.find(s => s.species === cleanSpecies)
+    const sp = (window.matchPlantSpecies && window.matchPlantSpecies(cleanSpecies))
+      || window.SPECIES.find(s => s.species === cleanSpecies)
       || window.SPECIES.find(s => cleanSpecies.includes(s.species) || s.species.includes(cleanSpecies))
       || window.SPECIES[0];
     const draft = window.makeDraftPlant(sp);

@@ -15,6 +15,7 @@ const runtimeFiles = [
   "account-service.js",
   "weather-service.js",
   "data.js",
+  "plant-catalog.js",
   "plant-photos.js",
   "plant-cutouts.js",
   "data-service.js",
@@ -63,6 +64,13 @@ const plantSlugs = [
   "lanmeishu",
   "xiuqiuhua",
   "zhubai"
+];
+
+const expansionPlantAssets = [
+  ...["qin-ye-rong", "xiang-pi-shu", "tian-tang-niao", "san-wei-kui", "long-xue-shu", "xiu-zhen-ye-zi", "zhu-yu", "cai-ye-yu", "chang-chun-teng", "dou-ban-lv", "kong-qi-feng-li", "tong-qian-cao"].map(slug => `assets/plants/expansion-preview-v1/${slug}.png`),
+  ...["ya-jiao-mu", "xing-fu-shu", "ping-an-shu", "ba-xi-mu", "guang-dong-wan-nian-qing", "di-shui-guan-yin", "qiu-lan", "xie-zhao-lan", "tian-zhu-kui", "du-juan-hua", "cha-hua", "san-jiao-mei"].map(slug => `assets/plants/expansion-preview-v2/${slug}.png`),
+  ...["bo-shi-dun-jue", "diao-zhu-mei", "fei-zhou-jin", "gui-hua", "he-guo-yu", "jing-mian-cao", "mi-lan", "ning-meng", "shi-hu-lan", "wang-wen-cao", "zhu-ding-hong", "zi-ye-cu-jiang-cao"].map(slug => `assets/plants/expansion-preview-v3/${slug}.png`),
+  ...["fei-ji-man-lv-rong", "long-lin-chun-yu", "long-lin-hai-yu", "kong-que-zhu-yu"].map(slug => `assets/plants/expansion-preview-v4/${slug}.png`),
 ];
 
 const extraAssets = [
@@ -136,7 +144,8 @@ for (const file of runtimeFiles.filter(file => file.endsWith(".jsx"))) await com
 
 const pngAssets = [
   ...extraAssets.filter(file => file.endsWith(".png")),
-  ...plantSlugs.map(slug => `assets/plants/final-v1/${slug}.png`)
+  ...plantSlugs.map(slug => `assets/plants/final-v1/${slug}.png`),
+  ...expansionPlantAssets,
 ];
 const assetMappings = await Promise.all(pngAssets.map(copyWebp));
 for (const file of extraAssets.filter(file => !file.endsWith(".png"))) copy(file);
