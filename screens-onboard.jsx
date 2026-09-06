@@ -70,7 +70,8 @@ function Onboard({ onComplete, onSkip, startAtSpecies = false }) {
         </div>
       )}
       {step === 0 && <ObWelcome sp={themeSp} onNext={() => setStep(2)} onSkip={onSkip} />}
-      {step === 2 && <ObSpeciesPicker sp={sp} pickSpecies={pickSpecies} onNext={() => sp && setStep(3)} />}
+      {step === 2 && <ObSpeciesPicker sp={sp} pickSpecies={pickSpecies}
+        onBack={() => startAtSpecies ? onSkip() : setStep(0)} onNext={() => sp && setStep(3)} />}
       {step === 3 && <ObName sp={sp} name={name} setName={setName} traits={traits} toggleTrait={toggleTrait}
         onBack={() => setStep(2)} onNext={() => setStep(4)} />}
       {step === 4 && <ObGenerate sp={sp} name={name} traits={traits} setOpener={setOpener} onNext={() => setStep(5)} />}
@@ -145,7 +146,7 @@ function ObWelcome({ sp, onNext, onSkip }) {
 }
 
 /* ---------- 2 · choose a species from the authored avatar library ---------- */
-function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
+function ObSpeciesPicker({ sp, pickSpecies, onBack, onNext }) {
   const photoInputRef = useRef(null);
   const [recognizing, setRecognizing] = useState(false);
   const [recognitionPhoto, setRecognitionPhoto] = useState("");
@@ -224,6 +225,11 @@ function ObSpeciesPicker({ sp, pickSpecies, onNext }) {
 
   return (
     <div className="soft-fade" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: "92px 20px 0" }}>
+      <button onClick={onBack} aria-label="返回" style={{ position: "absolute", top: 48, left: 14, zIndex: 6,
+        minWidth: 72, height: 40, padding: "0 8px", display: "flex", alignItems: "center", gap: 1,
+        color: "var(--ink-soft)", fontFamily: "var(--f-journal)", fontSize: 14 }}>
+        <Icon name="chevL" size={24} color="var(--ink-soft)" /> 返回
+      </button>
       <div style={{ textAlign: "center", flexShrink: 0 }}>
         <div className="kicker" style={{ color: "var(--green-deep)" }}>认识新朋友</div>
         <div style={{ fontFamily: "var(--f-journal)", fontSize: 25, fontWeight: 600, color: "var(--ink)", marginTop: 7 }}>

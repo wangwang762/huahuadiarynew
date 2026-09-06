@@ -21,7 +21,7 @@ for (const item of species) {
 }
 
 const onboarding = fs.readFileSync("screens-onboard.jsx", "utf8");
-for (const required of ["ObSpeciesPicker", "拍照识别植物", "也可以手动选择", "就是它，下一步", "window.HHDoctor.recognize"]) {
+for (const required of ["ObSpeciesPicker", "拍照识别植物", "也可以手动选择", "就是它，下一步", "window.HHDoctor.recognize", 'aria-label="返回"', "startAtSpecies ? onSkip() : setStep(0)"]) {
   if (!onboarding.includes(required)) throw new Error(`missing recognition picker marker: ${required}`);
 }
 for (const forbidden of ["AI 识别完成", "置信度 92%", "function ObCapture"]) {
